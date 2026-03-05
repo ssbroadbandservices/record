@@ -1,8 +1,49 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+
+const firebaseConfig = {
+    // We only need the databaseURL to connect to Realtime Database
+    // Make sure your Firebase Realtime database rules are set to ".read": true, ".write": true
+    databaseURL: "https://hybrid-internet-database-default-rtdb.firebaseio.com"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const operatorsRef = ref(db, 'operators');
+
+
 // State Management
 const STORAGE_KEY = 'hybrid_operators_v1';
 const LOGO_KEY = 'hybrid_custom_logo';
+// Intialization: Try to get from local storage for faster UI load while Firebase syncs
 let operators = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 let currentOperatorId = null;
+
+// Firebase Realtime Database Synchronization Listener
+let isInitialSync = true;
+onValue(operatorsRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        operators = Array.isArray(data) ? data : Object.values(data);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(operators));
+    } else if (isInitialSync && operators.length > 0) {
+        // If Firebase is empty, but we have local data! (Syncing local -> Firebase immediately)
+        set(operatorsRef, operators);
+    } else {
+        operators = [];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(operators));
+    }
+    isInitialSync = false;
+
+    renderDashboard();
+    if (currentOperatorId) {
+        renderOperatorView();
+    }
+}, (error) => {
+    console.error("Firebase Sync Error. Ensure Database rules are active.", error);
+    showToast("Firebase sync disconnected. Using local data.", "error");
+});
+
 
 // DOM Elements
 const views = {
@@ -43,7 +84,16 @@ function generateId() {
 }
 
 function saveData() {
+    // 1. Save locally for fast cache
     localStorage.setItem(STORAGE_KEY, JSON.stringify(operators));
+
+    // 2. Push to Firebase (Triggers onValue which re-renders UI across devices)
+    set(operatorsRef, operators).catch((err) => {
+        console.error("Failed to save to database:", err);
+        showToast("Error syncing to Cloud Database!", "error");
+    });
+
+    // 3. Immediately update Local UI
     renderDashboard();
     if (currentOperatorId) {
         renderOperatorView();
@@ -480,6 +530,7 @@ document.getElementById('plan-form').addEventListener('submit', (e) => {
     }
 });
 
+// BIND THESE TO WINDOW SINCE SCRIPT IS A MODULE
 window.editPlan = function (planId) {
     const operator = operators.find(o => o.id === currentOperatorId);
     if (operator && operator.plans) {
