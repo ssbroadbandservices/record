@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Hybrid Internet Operator Management Dashboard for managing multiple internet service operators with their plans, users, and tracking.">
+    <title>Hybrid Internet - Operator Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header class="app-header">
+        <div class="logo">
+            <img src="" alt="Company Logo" class="logo-img" id="company-logo" style="display: none;"
+                onerror="this.style.display='none'; document.getElementById('fallback-icon').style.display='block';">
+            <i class="fa-solid fa-wifi logo-icon" id="fallback-icon"></i>
+            <h1>Hybrid Internet</h1>
+        </div>
+        <div class="header-right" style="gap: 0.5rem;">
+            <button id="config-upi-btn" class="btn btn-outline btn-sm" title="Configure UPI Payment ID">
+                <i class="fa-solid fa-qrcode"></i> Setup UPI
+            </button>
+            <label for="logo-upload" class="btn btn-outline btn-sm" title="Upload Company Logo">
+                <i class="fa-solid fa-camera"></i> Change Logo
+            </label>
+            <input type="file" id="logo-upload" accept="image/*" style="display: none;">
+        </div>
+    </header>
+
+    <main id="app-container">
+        <!-- Dashboard View -->
+        <section id="dashboard-view" class="view active">
+            <div class="dashboard-controls">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="search-operator" placeholder="Search operators...">
+                </div>
+                <button id="export-btn" class="btn btn-outline"><i class="fa-solid fa-file-export"></i> Export
+                    Data</button>
+            </div>
+
+            <div class="summary-cards" id="global-summary">
+                <!-- Populated via JS -->
+            </div>
+
+            <div class="operator-list" id="operator-list">
+                <!-- Operator cards populated via JS -->
+            </div>
+
+            <button class="fab" id="add-operator-fab" title="Add Operator">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </section>
+
+        <!-- Operator Details View -->
+        <section id="operator-view" class="view hidden">
+            <div class="view-header">
+                <div class="view-header-left">
+                    <button id="back-to-dash" class="btn btn-icon"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                    <h2 id="view-op-title">Operator Name</h2>
+                </div>
+                <div class="view-header-actions" style="display:flex; gap:0.5rem; flex-wrap: wrap;">
+                    <button id="report-btn" class="btn btn-outline"><i class="fa-solid fa-file-pdf"></i> Download
+                        Report</button>
+                    <button id="receipt-btn" class="btn btn-success"><i class="fa-solid fa-file-invoice"></i> No Dues
+                        Receipt</button>
+                    <button id="delete-op-btn" class="btn btn-danger"><i class="fa-solid fa-trash"></i> Delete</button>
+                </div>
+            </div>
+
+            <div class="summary-cards" id="op-summary">
+                <!-- Populated via JS -->
+            </div>
+
+            <div class="details-grid">
+                <!-- Plans Section -->
+                <div class="card section-card">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-network-wired"></i> Managed Services</h3>
+                        <button class="btn btn-primary btn-sm" id="add-plan-btn"><i class="fa-solid fa-plus"></i> Add
+                            Service</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Pack Details</th>
+                                    <th>Users</th>
+                                    <th>Rate</th>
+                                    <th>Total Expected</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plans-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Payments Section -->
+                <div class="card section-card">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-wallet"></i> Payment Records</h3>
+                        <button class="btn btn-primary btn-sm" id="add-payment-btn"><i class="fa-solid fa-plus"></i> Add
+                            Payment</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payments-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Modals -->
+        <div class="modal-overlay" id="operator-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Add New Operator</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="operator-form">
+                    <div class="form-group">
+                        <label for="op-name">Operator Name / Username <span class="required">*</span></label>
+                        <input type="text" id="op-name" required placeholder="e.g., JohnDoe Network">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Operator</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="upi-modal">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <h3>Setup UPI Information</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="upi-form">
+                    <div class="form-group">
+                        <label for="upi-id">Virtual Payment Address (UPI ID) <span class="required">*</span></label>
+                        <input type="text" id="upi-id" required placeholder="e.g., yourname@bank or 1234567890@ybl">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">This will be used
+                            to automatically generate scannable Payment QR codes on your Invoices.</p>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Config</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="plan-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="plan-modal-title">Add / Edit Service Plan</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="plan-form">
+                    <input type="hidden" id="plan-id">
+
+                    <div class="form-group">
+                        <label for="plan-category">Service Category <span class="required">*</span></label>
+                        <select id="plan-category" required>
+                            <option value="Internet">Internet</option>
+                            <option value="IPTV">IPTV</option>
+                            <option value="OTT">OTT</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="plan-type">Pack Details / Name (Customizable) <span
+                                class="required">*</span></label>
+                        <input type="text" id="plan-type" list="plan-types" required
+                            placeholder="e.g., 50 Mbps, Basic Pack, Netflix...">
+                        <datalist id="plan-types">
+                            <option value="20 Mbps"></option>
+                            <option value="50 Mbps"></option>
+                            <option value="100 Mbps"></option>
+                            <option value="200 Mbps"></option>
+                            <option value="Basic IPTV"></option>
+                            <option value="Premium OTT"></option>
+                        </datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="plan-users">Number of Users <span class="required">*</span></label>
+                        <input type="number" id="plan-users" min="0" required placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="plan-rate">Rate per User (₹/$) <span class="required">*</span></label>
+                        <input type="number" id="plan-rate" min="0" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Plan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="payment-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="payment-modal-title">Add Payment</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="payment-form">
+                    <input type="hidden" id="payment-id">
+                    <div class="form-group">
+                        <label for="payment-type">Payment Type <span class="required">*</span></label>
+                        <select id="payment-type" required>
+                            <option value="" disabled selected>Select Payment Type</option>
+                            <option value="Data">Data</option>
+                            <option value="Balance Add">Balance Add</option>
+                            <option value="IPTV">IPTV</option>
+                            <option value="OTT">OTT</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-amount">Amount <span class="required">*</span></label>
+                        <input type="number" id="payment-amount" min="0" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-date">Date <span class="required">*</span></label>
+                        <input type="date" id="payment-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-status">Status</label>
+                        <select id="payment-status">
+                            <option value="Paid">Paid</option>
+                            <option value="Unpaid">Unpaid</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Payment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Confirmation Dialog Output -->
+        <div class="modal-overlay" id="confirm-modal">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <h3 id="confirm-title">Confirm Action</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirm-message">Are you sure you want to proceed?</p>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirm-btn">Yes, Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="report-modal">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <h3>Download Report settings</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="report-form">
+                    <div class="form-group"
+                        style="display: flex; align-items: center; gap: 0.5rem; background: var(--surface-hover); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <input type="checkbox" id="report-gst"
+                            style="width: 1.25rem; height: 1.25rem; accent-color: var(--primary-color); cursor: pointer;">
+                        <label for="report-gst"
+                            style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                            Apply 18% GST to Total <span
+                                style="font-size: 0.75rem; font-weight: 500; background: rgba(59, 130, 246, 0.1); color: var(--primary-color); padding: 0.125rem 0.375rem; border-radius: var(--radius-sm);">Invoice
+                                Config</span>
+                        </label>
+                    </div>
+                    <div class="form-actions" style="margin-top: 1rem;">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-file-pdf"></i>
+                            Generate</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Toast Notifications Container -->
+        <div id="toast-container" class="toast-container"></div>
+    </main>
+
+    <!-- Invisible Receipt Output for Printing -->
+    <div id="print-area" style="display: none;"></div>
+
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>
