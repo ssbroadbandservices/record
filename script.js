@@ -679,9 +679,9 @@ function triggerPrint(htmlContent) {
     setTimeout(() => {
         window.scrollTo(0, 0);
         window.print();
-        // clear the print area after printing just to keep dom clean
-        setTimeout(() => printArea.innerHTML = '', 1000);
-    }, 700); // increased delay from 150 to 700ms for mobile rendering
+        // Clear the print area with a much longer delay so the mobile print spooler can capture it fully.
+        setTimeout(() => printArea.innerHTML = '', 3500);
+    }, 800); // increased delay to 800ms for mobile rendering
 }
 
 document.getElementById('balance-receipt-btn').addEventListener('click', () => {
@@ -743,6 +743,21 @@ document.getElementById('balance-receipt-btn').addEventListener('click', () => {
                     </tr>
                 </tfoot>
             </table>
+            
+            ${(m.outstanding > 0 && localStorage.getItem(UPI_KEY)) ? `
+            <!-- Payment QR Section -->
+            <div style="margin-top: 2rem; padding: 1.5rem; border: 2px dashed #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; background: #eff6ff;">
+                <div>
+                    <h4 style="margin: 0 0 5px 0; color: #1e3a8a; font-size: 16px;">Scan to Pay Outstanding Balance</h4>
+                    <p style="margin: 0; color: #3b82f6; font-size: 13px; font-weight: 500;">Pay securely via any UPI app (GPay, PhonePe, Paytm)</p>
+                    <p style="margin: 10px 0 0 0; font-size: 24px; font-weight: 700; color: #0f172a;">${formatCurrency(m.outstanding)}</p>
+                    <p style="margin: 5px 0 0 0; font-size: 11px; color: #64748b;">UPI ID: ${localStorage.getItem(UPI_KEY)}</p>
+                </div>
+                <div style="background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=upi://pay?pa=${encodeURIComponent(localStorage.getItem(UPI_KEY))}&pn=Hybrid%20Internet&am=${Math.max(m.outstanding, 0)}&cu=INR" alt="UPI QR Code" style="width: 120px; height: 120px; object-fit: contain;" />
+                </div>
+            </div>
+            ` : ''}
             
             <div style="text-align: center; margin-top: 4rem; padding-top: 2rem; border-top: 1px dashed #cbd5e1; color: #64748b;">
                 <p style="margin: 0; font-weight: 500;">Please verify this receipt for future reference.</p>
@@ -830,6 +845,21 @@ document.getElementById('receipt-btn').addEventListener('click', () => {
                     </tr>
                 </tfoot>
             </table>
+            
+            ${(m.outstanding > 0 && localStorage.getItem(UPI_KEY)) ? `
+            <!-- Payment QR Section -->
+            <div style="margin-top: 2rem; padding: 1.5rem; border: 2px dashed #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; background: #eff6ff;">
+                <div>
+                    <h4 style="margin: 0 0 5px 0; color: #1e3a8a; font-size: 16px;">Scan to Pay Outstanding Balance</h4>
+                    <p style="margin: 0; color: #3b82f6; font-size: 13px; font-weight: 500;">Pay securely via any UPI app (GPay, PhonePe, Paytm)</p>
+                    <p style="margin: 10px 0 0 0; font-size: 24px; font-weight: 700; color: #0f172a;">${formatCurrency(m.outstanding)}</p>
+                    <p style="margin: 5px 0 0 0; font-size: 11px; color: #64748b;">UPI ID: ${localStorage.getItem(UPI_KEY)}</p>
+                </div>
+                <div style="background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=upi://pay?pa=${encodeURIComponent(localStorage.getItem(UPI_KEY))}&pn=Hybrid%20Internet&am=${Math.max(m.outstanding, 0)}&cu=INR" alt="UPI QR Code" style="width: 120px; height: 120px; object-fit: contain;" />
+                </div>
+            </div>
+            ` : ''}
             
             <div style="text-align: center; margin-top: 4rem; padding-top: 2rem; border-top: 1px dashed #cbd5e1; color: #64748b;">
                 <p style="margin: 0; font-weight: 500;">Thank you for your continuous business partnership.</p>
