@@ -169,9 +169,21 @@ function calculateOperatorMetrics(operator) {
     const plans = operator.plans || [];
     const payments = operator.payments || [];
 
-    const totalUsers = plans.reduce((sum, p) => sum + parseInt(p.users || 0), 0);
+    // Filter out old legacy GST plans so they don't corrupt the actual user count metrics
+    const realPlans = plans.filter(p => !p.type.includes('18% GST') && !p.type.includes('GST 18%'));
 
-    const expectedRevenue = plans.reduce((sum, p) => sum + (parseInt(p.users || 0) * parseFloat(p.rate || 0)), 0);
+    const totalUsers = realPlans.reduce((sum, p) => sum + parseInt(p.users || 0), 0);
+
+    const baseRevenue = realPlans.reduce((sum, p) => sum + (parseInt(p.users || 0) * parseFloat(p.rate || 0)), 0);
+
+    // Auto-migrate legacy plans into the new boolean flag correctly
+    const hasLegacyGst = plans.some(p => p.type.includes('18% GST') || p.type.includes('GST 18%'));
+    if (hasLegacyGst) {
+        operator.applyGst = true;
+    }
+
+    const gstAmount = operator.applyGst ? (baseRevenue * 0.18) : 0;
+    const expectedRevenue = baseRevenue + gstAmount;
 
     const totalPaid = payments
         .filter(p => p.status === 'Paid')
@@ -179,7 +191,7 @@ function calculateOperatorMetrics(operator) {
 
     const outstanding = expectedRevenue - totalPaid;
 
-    return { totalUsers, expectedRevenue, totalPaid, outstanding };
+    return { totalUsers, baseRevenue, gstAmount, expectedRevenue, totalPaid, outstanding };
 }
 
 // --- Dashboard Features ---
@@ -339,10 +351,12 @@ function renderOperatorView() {
     // Plans Table
     const plansTbody = document.getElementById('plans-tbody');
     plansTbody.innerHTML = '';
-    if (!operator.plans || operator.plans.length === 0) {
+    const displayPlans = (operator.plans || []).filter(p => !p.type.includes('18% GST') && !p.type.includes('GST 18%'));
+
+    if (displayPlans.length === 0) {
         plansTbody.innerHTML = `<tr><td colspan="6" class="empty-state">No services configured yet.</td></tr>`;
     } else {
-        operator.plans.forEach(plan => {
+        displayPlans.forEach(plan => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>
@@ -359,6 +373,31 @@ function renderOperatorView() {
             `;
             plansTbody.appendChild(tr);
         });
+
+        if (operator.applyGst && m.baseRevenue > 0) {
+            const trSub = document.createElement('tr');
+            trSub.style.backgroundColor = 'var(--surface-hover)';
+            trSub.innerHTML = `
+                <td colspan="4" style="text-align: right; font-weight: 600; color: var(--text-muted);">Base Subtotal:</td>
+                <td colspan="2"><strong>${formatCurrency(m.baseRevenue)}</strong></td>
+            `;
+            plansTbody.appendChild(trSub);
+
+            const trGst = document.createElement('tr');
+            trGst.style.backgroundColor = '#eff6ff';
+            trGst.innerHTML = `
+                <td colspan="4" style="text-align: right; font-weight: 600; color: var(--primary-color);">+ 18% GST Appended:</td>
+                <td colspan="2"><strong style="color: var(--primary-color);">${formatCurrency(m.gstAmount)}</strong></td>
+            `;
+            plansTbody.appendChild(trGst);
+
+            const trTotal = document.createElement('tr');
+            trTotal.innerHTML = `
+                <td colspan="4" style="text-align: right; font-weight: 700; color: var(--text-main);">Grand Total Expected:</td>
+                <td colspan="2"><strong>${formatCurrency(m.expectedRevenue)}</strong></td>
+            `;
+            plansTbody.appendChild(trTotal);
+        }
     }
 
     // Payments Table
@@ -475,35 +514,19 @@ document.getElementById('plan-category').addEventListener('change', (e) => {
 // Add 18% GST Plan
 document.getElementById('add-gst-btn').addEventListener('click', () => {
     const operator = operators.find(o => o.id === currentOperatorId);
-    if (!operator || !operator.plans || operator.plans.length === 0) {
-        showToast('Please add services first to calculate GST', 'warning');
+    if (!operator) return;
+
+    if (operator.applyGst) {
+        showToast('GST is already active.', 'warning');
         return;
     }
 
-    // Calculate sum of base plans (exclude any existing "18% GST" plan from calculation)
-    const baseRevenue = operator.plans
-        .filter(p => p.type !== '18% GST' && p.type !== 'GST 18%')
-        .reduce((sum, p) => sum + (parseInt(p.users || 0) * parseFloat(p.rate || 0)), 0);
-
-    const gstAmount = baseRevenue * 0.18;
-
-    if (gstAmount > 0) {
-        // Check if GST plan already exists
-        const gstPlanIndex = operator.plans.findIndex(p => p.type === '18% GST' || p.type === 'GST 18%');
-        if (gstPlanIndex >= 0) {
-            operator.plans[gstPlanIndex].rate = gstAmount;
-            showToast('18% GST updated successfully');
-        } else {
-            operator.plans.push({
-                id: generateId(),
-                category: 'Other',
-                type: '18% GST',
-                users: 1,
-                rate: gstAmount
-            });
-            showToast('18% GST added successfully');
-        }
+    const m = calculateOperatorMetrics(operator);
+    if (m.baseRevenue > 0) {
+        operator.applyGst = true;
+        operator.plans = (operator.plans || []).filter(p => !p.type.includes('18% GST') && !p.type.includes('GST 18%'));
         saveData();
+        showToast('18% GST applied to total successfully');
     } else {
         showToast('Base revenue is 0. Cannot add GST.', 'error');
     }
@@ -512,20 +535,13 @@ document.getElementById('add-gst-btn').addEventListener('click', () => {
 // Remove GST Plan
 document.getElementById('remove-gst-btn').addEventListener('click', () => {
     const operator = operators.find(o => o.id === currentOperatorId);
-    if (!operator || !operator.plans || operator.plans.length === 0) {
-        showToast('No services to remove GST from', 'warning');
-        return;
-    }
+    if (!operator) return;
 
-    const initialLength = operator.plans.length;
-    operator.plans = operator.plans.filter(p => p.type !== '18% GST' && p.type !== 'GST 18%');
+    operator.applyGst = false;
+    operator.plans = (operator.plans || []).filter(p => !p.type.includes('18% GST') && !p.type.includes('GST 18%'));
 
-    if (operator.plans.length < initialLength) {
-        saveData();
-        showToast('18% GST removed successfully');
-    } else {
-        showToast('No GST found to remove', 'warning');
-    }
+    saveData();
+    showToast('18% GST removed successfully');
 });
 
 // Add Plan
@@ -673,15 +689,41 @@ window.togglePaymentStatus = function (paymentId) {
 // Reusable function to trigger native printing behavior securely
 function triggerPrint(htmlContent) {
     const printArea = document.getElementById('print-area');
-    printArea.innerHTML = htmlContent;
+    const appContainer = document.getElementById('app-container');
+    const header = document.querySelector('.app-header');
 
-    // Mobile/Safari hack for print
+    // Force strict JS-level DOM swap so mobile browsers snapshot the actual content
+    if (appContainer) appContainer.style.setProperty('display', 'none', 'important');
+    if (header) header.style.setProperty('display', 'none', 'important');
+
+    printArea.innerHTML = htmlContent;
+    printArea.style.setProperty('display', 'block', 'important');
+    printArea.style.setProperty('position', 'relative', 'important');
+    printArea.style.setProperty('left', '0', 'important');
+    printArea.style.setProperty('top', '0', 'important');
+    printArea.style.setProperty('width', '100%', 'important');
+    printArea.style.setProperty('opacity', '1', 'important');
+    printArea.style.setProperty('visibility', 'visible', 'important');
+
+    // Small delay to allow images (QR Code) to load and DOM to reflow
     setTimeout(() => {
         window.scrollTo(0, 0);
         window.print();
-        // Clear the print area with a much longer delay so the mobile print spooler can capture it fully.
-        setTimeout(() => printArea.innerHTML = '', 3500);
-    }, 800); // increased delay to 800ms for mobile rendering
+
+        // Restore the standard app interface
+        setTimeout(() => {
+            if (appContainer) appContainer.style.removeProperty('display');
+            if (header) header.style.removeProperty('display');
+            printArea.style.removeProperty('display');
+            printArea.style.removeProperty('position');
+            printArea.style.removeProperty('left');
+            printArea.style.removeProperty('top');
+            printArea.style.removeProperty('width');
+            printArea.style.removeProperty('opacity');
+            printArea.style.removeProperty('visibility');
+            printArea.innerHTML = '';
+        }, 1500); // Wait for print overlay to fully complete
+    }, 400); // 400ms is perfectly safe for mobile synchronous constraints
 }
 
 document.getElementById('balance-receipt-btn').addEventListener('click', () => {
@@ -727,8 +769,18 @@ document.getElementById('balance-receipt-btn').addEventListener('click', () => {
                     </tr>
                 </thead>
                 <tbody>
+                    ${operator.applyGst ? `
                     <tr>
-                        <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; font-size: 15px;">Total Payable Amount</td>
+                        <td style="padding: 16px 0; border-bottom: 1px dashed #e2e8f0; font-weight: 500; font-size: 15px; color: #64748b;">Services Base Amount</td>
+                        <td style="padding: 16px 0; border-bottom: 1px dashed #e2e8f0; text-align: right; font-weight: 500; font-size: 15px; color: #64748b;">${formatCurrency(m.baseRevenue)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; font-size: 15px; color: #3b82f6;">+ 18% GST Applied</td>
+                        <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 500; font-size: 15px; color: #3b82f6;">${formatCurrency(m.gstAmount)}</td>
+                    </tr>
+                    ` : ''}
+                    <tr>
+                        <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; font-size: 15px;">Total Payable Amount ${operator.applyGst ? '<span style="font-size: 12px; color: #64748b;">(Incl. Tax)</span>' : ''}</td>
                         <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 500; font-size: 15px;">${formatCurrency(m.expectedRevenue)}</td>
                     </tr>
                     <tr>
@@ -829,6 +881,16 @@ document.getElementById('receipt-btn').addEventListener('click', () => {
                     </tr>
                 </thead>
                 <tbody>
+                    ${operator.applyGst ? `
+                    <tr>
+                        <td style="padding: 16px 0; border-bottom: 1px dashed #e2e8f0; font-weight: 500; font-size: 15px; color: #64748b;">Services Base Amount</td>
+                        <td style="padding: 16px 0; border-bottom: 1px dashed #e2e8f0; text-align: right; font-weight: 500; font-size: 15px; color: #64748b;">${formatCurrency(m.baseRevenue)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; font-size: 15px; color: #3b82f6;">+ 18% GST Applied</td>
+                        <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 500; font-size: 15px; color: #3b82f6;">${formatCurrency(m.gstAmount)}</td>
+                    </tr>
+                    ` : ''}
                     <tr>
                         <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; font-size: 15px;">Total Expected Revenue</td>
                         <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 500; font-size: 15px;">${formatCurrency(m.expectedRevenue)}</td>
@@ -905,8 +967,10 @@ function generateReportPdf(applyGst) {
 
     // Build Plans List - Remove GST from per plan output
     let plansHtml = '';
-    if (operator.plans && operator.plans.length > 0) {
-        plansHtml = operator.plans.map(p => `
+    const displayPlans = (operator.plans || []).filter(p => !p.type.includes('18% GST') && !p.type.includes('GST 18%'));
+
+    if (displayPlans.length > 0) {
+        plansHtml = displayPlans.map(p => `
             <tr>
                 <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px;">
                     <span style="font-size: 11px; padding: 2px 6px; background: #e2e8f0; border-radius: 4px; margin-right: 6px;">${p.category || 'Internet'}</span>
@@ -922,21 +986,32 @@ function generateReportPdf(applyGst) {
     }
 
     // Add explicit GST row to Plans table if GST is checked
-    if (applyGst && m.expectedRevenue > 0) {
-        plansHtml += `
-            <tr>
-                <td colspan="3" style="padding: 10px 0; border-top: 2px solid #e2e8f0; font-size: 14px; text-align: right; font-weight: 600; color: #64748b;">Subtotal:</td>
-                <td style="padding: 10px 0; border-top: 2px solid #e2e8f0; text-align: right; font-weight: 600; font-size: 14px;">${formatCurrency(m.expectedRevenue)}</td>
-            </tr>
-            <tr>
-                <td colspan="3" style="padding: 10px 0; font-size: 14px; text-align: right; font-weight: 600; color: #3b82f6;">+ 18% GST:</td>
-                <td style="padding: 10px 0; text-align: right; font-weight: 600; font-size: 14px; color: #3b82f6;">${formatCurrency(gstAmount)}</td>
-            </tr>
-            <tr>
-                <td colspan="3" style="padding: 10px 0; font-size: 15px; text-align: right; font-weight: 700; color: #0f172a;">Grand Total:</td>
-                <td style="padding: 10px 0; text-align: right; font-weight: 700; font-size: 15px; color: #0f172a;">${formatCurrency(displayExpected)}</td>
-            </tr>
-        `;
+    if (applyGst || operator.applyGst) {
+        let printGstAmount = m.gstAmount;
+        let printExpected = m.expectedRevenue;
+
+        // If report forces GST but operator wasn't running it normally, we need to recalculate explicitly for the layout
+        if (applyGst && !operator.applyGst) {
+            printGstAmount = m.baseRevenue * 0.18;
+            printExpected = m.baseRevenue + printGstAmount;
+        }
+
+        if (m.baseRevenue > 0) {
+            plansHtml += `
+                <tr>
+                    <td colspan="3" style="padding: 10px 0; border-top: 2px solid #e2e8f0; font-size: 14px; text-align: right; font-weight: 600; color: #64748b;">Subtotal:</td>
+                    <td style="padding: 10px 0; border-top: 2px solid #e2e8f0; text-align: right; font-weight: 600; font-size: 14px;">${formatCurrency(m.baseRevenue)}</td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="padding: 10px 0; font-size: 14px; text-align: right; font-weight: 600; color: #3b82f6;">+ 18% GST Applied:</td>
+                    <td style="padding: 10px 0; text-align: right; font-weight: 600; font-size: 14px; color: #3b82f6;">${formatCurrency(printGstAmount)}</td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="padding: 10px 0; font-size: 15px; text-align: right; font-weight: 700; color: #0f172a;">Grand Total:</td>
+                    <td style="padding: 10px 0; text-align: right; font-weight: 700; font-size: 15px; color: #0f172a;">${formatCurrency(printExpected)}</td>
+                </tr>
+            `;
+        }
     }
 
     // Build Payments List (Descending)
