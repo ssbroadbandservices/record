@@ -742,22 +742,43 @@ form {
 /* Print Area specifically for formatting NO DUES RECEIPTS */
 @media screen {
     #print-area {
-        display: none !important;
+        position: absolute !important;
+        left: -9999px !important;
+        top: -9999px !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
     }
 }
 
 @media print {
-    body>*:not(#print-area) {
+
+    .app-header,
+    #app-container,
+    .modal-overlay,
+    #toast-container {
         display: none !important;
+    }
+
+    html,
+    body {
+        background-color: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
     }
 
     #print-area {
         display: block !important;
         position: static !important;
-        width: 100%;
-        padding: 0;
-        margin: 0;
-        background: white;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        opacity: 1 !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 }
 
