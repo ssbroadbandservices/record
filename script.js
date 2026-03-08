@@ -472,6 +472,62 @@ document.getElementById('plan-category').addEventListener('change', (e) => {
     }
 });
 
+// Add 18% GST Plan
+document.getElementById('add-gst-btn').addEventListener('click', () => {
+    const operator = operators.find(o => o.id === currentOperatorId);
+    if (!operator || !operator.plans || operator.plans.length === 0) {
+        showToast('Please add services first to calculate GST', 'warning');
+        return;
+    }
+
+    // Calculate sum of base plans (exclude any existing "18% GST" plan from calculation)
+    const baseRevenue = operator.plans
+        .filter(p => p.type !== '18% GST' && p.type !== 'GST 18%')
+        .reduce((sum, p) => sum + (parseInt(p.users || 0) * parseFloat(p.rate || 0)), 0);
+
+    const gstAmount = baseRevenue * 0.18;
+
+    if (gstAmount > 0) {
+        // Check if GST plan already exists
+        const gstPlanIndex = operator.plans.findIndex(p => p.type === '18% GST' || p.type === 'GST 18%');
+        if (gstPlanIndex >= 0) {
+            operator.plans[gstPlanIndex].rate = gstAmount;
+            showToast('18% GST updated successfully');
+        } else {
+            operator.plans.push({
+                id: generateId(),
+                category: 'Other',
+                type: '18% GST',
+                users: 1,
+                rate: gstAmount
+            });
+            showToast('18% GST added successfully');
+        }
+        saveData();
+    } else {
+        showToast('Base revenue is 0. Cannot add GST.', 'error');
+    }
+});
+
+// Remove GST Plan
+document.getElementById('remove-gst-btn').addEventListener('click', () => {
+    const operator = operators.find(o => o.id === currentOperatorId);
+    if (!operator || !operator.plans || operator.plans.length === 0) {
+        showToast('No services to remove GST from', 'warning');
+        return;
+    }
+
+    const initialLength = operator.plans.length;
+    operator.plans = operator.plans.filter(p => p.type !== '18% GST' && p.type !== 'GST 18%');
+
+    if (operator.plans.length < initialLength) {
+        saveData();
+        showToast('18% GST removed successfully');
+    } else {
+        showToast('No GST found to remove', 'warning');
+    }
+});
+
 // Add Plan
 document.getElementById('add-plan-btn').addEventListener('click', () => {
     document.getElementById('plan-form').reset();
@@ -619,12 +675,84 @@ function triggerPrint(htmlContent) {
     const printArea = document.getElementById('print-area');
     printArea.innerHTML = htmlContent;
 
+    // Mobile/Safari hack for print
     setTimeout(() => {
+        window.scrollTo(0, 0);
         window.print();
         // clear the print area after printing just to keep dom clean
         setTimeout(() => printArea.innerHTML = '', 1000);
-    }, 150);
+    }, 700); // increased delay from 150 to 700ms for mobile rendering
 }
+
+document.getElementById('balance-receipt-btn').addEventListener('click', () => {
+    const operator = operators.find(o => o.id === currentOperatorId);
+    if (!operator) return;
+
+    const m = calculateOperatorMetrics(operator);
+    const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    const currentLogo = localStorage.getItem(LOGO_KEY);
+
+    // Sort payments by date descending to find the last payment
+    const sortedPayments = (operator.payments || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+    const lastPayment = sortedPayments.length > 0 ? sortedPayments[0] : null;
+
+    const htmlContent = `
+        <div style="font-family: 'Inter', sans-serif; color: #0f172a; max-width: 800px; margin: 0 auto; border: 1px solid #e2e8f0; padding: 3rem; border-radius: 12px; position: relative; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 1.5rem; margin-bottom: 2rem;">
+                <div>
+                    ${currentLogo ?
+            `<img src="${currentLogo}" style="height: 60px; margin-bottom: 1rem; object-fit: contain;" />` :
+            `<h1 style="color: #3b82f6; font-size: 24px; margin: 0 0 10px 0;">Hybrid Internet</h1>`
+        }
+                    <h2 style="margin: 0; font-size: 28px; color: #0f172a; font-weight: 700; letter-spacing: -0.5px;">BALANCE DUES RECEIPT</h2>
+                </div>
+                <div style="text-align: right; color: #64748b;">
+                    <p style="margin: 0;">Date: <strong style="color: #0f172a;">${dateStr}</strong></p>
+                    <p style="margin: 5px 0 0 0;">Receipt No: <strong style="color: #0f172a;">#BAL-${Math.floor(1000 + Math.random() * 9000)}</strong></p>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 2.5rem; background-color: #fef3c7; padding: 1.5rem; border-radius: 8px; border: 1px solid #fde68a;">
+                <h3 style="margin: 0 0 10px 0; color: #b45309; text-transform: uppercase; font-size: 13px; font-weight: 600; letter-spacing: 1px;">Operator Details</h3>
+                <p style="margin: 0; font-size: 20px; font-weight: 600; color: #92400e;">${operator.name}</p>
+                ${lastPayment ? `<p style="margin: 10px 0 0 0; font-size: 14px; color: #b45309;">Last Payment Received: <strong style="color: #10b981;">${formatCurrency(lastPayment.amount)}</strong> on ${formatDate(lastPayment.date)}</p>` : ''}
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 2rem;">
+                <thead>
+                    <tr style="text-align: left;">
+                        <th style="padding: 12px 0; border-bottom: 2px solid #e2e8f0; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 13px;">Description</th>
+                        <th style="padding: 12px 0; border-bottom: 2px solid #e2e8f0; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 13px; text-align: right;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; font-size: 15px;">Total Payable Amount</td>
+                        <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 500; font-size: 15px;">${formatCurrency(m.expectedRevenue)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; font-size: 15px;">Total Received Till Date</td>
+                        <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 500; font-size: 15px; color: #10b981;">- ${formatCurrency(m.totalPaid)}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td style="padding: 20px 0 0 0; font-weight: 700; font-size: 18px; color: #0f172a;">Total Amount Remaining to Pay</td>
+                        <td style="padding: 20px 0 0 0; font-weight: 700; font-size: 20px; text-align: right; color: ${m.outstanding > 0 ? '#ef4444' : '#10b981'};">${formatCurrency(Math.max(m.outstanding, 0))}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            
+            <div style="text-align: center; margin-top: 4rem; padding-top: 2rem; border-top: 1px dashed #cbd5e1; color: #64748b;">
+                <p style="margin: 0; font-weight: 500;">Please verify this receipt for future reference.</p>
+                <p style="margin: 5px 0 0 0; font-size: 13px;">This is a computer-generated receipt.</p>
+            </div>
+        </div>
+    `;
+
+    triggerPrint(htmlContent);
+});
 
 // 1. Generation Logic for "No Dues" Receipt (Available always but custom message based on balance)
 document.getElementById('receipt-btn').addEventListener('click', () => {
