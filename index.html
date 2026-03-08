@@ -66,6 +66,10 @@
                 <div class="view-header-actions" style="display:flex; gap:0.5rem; flex-wrap: wrap;">
                     <button id="report-btn" class="btn btn-outline"><i class="fa-solid fa-file-pdf"></i> Download
                         Report</button>
+                    <button id="balance-receipt-btn" class="btn"
+                        style="background-color: var(--warning-color); color: white;"><i
+                            class="fa-solid fa-file-invoice-dollar"></i> Balance
+                        Receipt</button>
                     <button id="receipt-btn" class="btn btn-success"><i class="fa-solid fa-file-invoice"></i> No Dues
                         Receipt</button>
                     <button id="delete-op-btn" class="btn btn-danger"><i class="fa-solid fa-trash"></i> Delete</button>
@@ -81,8 +85,16 @@
                 <div class="card section-card">
                     <div class="section-header">
                         <h3><i class="fa-solid fa-network-wired"></i> Managed Services</h3>
-                        <button class="btn btn-primary btn-sm" id="add-plan-btn"><i class="fa-solid fa-plus"></i> Add
-                            Service</button>
+                        <div style="display:flex; gap:0.5rem; flex-wrap: wrap;">
+                            <button class="btn btn-outline btn-sm" id="add-gst-btn"><i class="fa-solid fa-percent"></i>
+                                Add/Update 18% GST</button>
+                            <button class="btn btn-outline btn-sm" id="remove-gst-btn"
+                                style="color: var(--danger-color); border-color: var(--danger-color);"><i
+                                    class="fa-solid fa-times"></i> Remove GST</button>
+                            <button class="btn btn-primary btn-sm" id="add-plan-btn"><i class="fa-solid fa-plus"></i>
+                                Add
+                                Service</button>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="data-table">
@@ -308,7 +320,7 @@
     </main>
 
     <!-- Invisible Receipt Output for Printing -->
-    <div id="print-area" style="display: none;"></div>
+    <div id="print-area"></div>
 
     <script type="module" src="script.js"></script>
 </body>
