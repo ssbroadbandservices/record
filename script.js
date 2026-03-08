@@ -686,44 +686,35 @@ window.togglePaymentStatus = function (paymentId) {
 
 // --- PRINT & PDF LOGIC ---
 
-// Reusable function to trigger native printing behavior securely
-function triggerPrint(htmlContent) {
-    const printArea = document.getElementById('print-area');
-    const appContainer = document.getElementById('app-container');
-    const header = document.querySelector('.app-header');
+// Reusable function to trigger native printing behavior securely via PDF Generation
+function triggerPrint(htmlContent, filename = "Download.pdf") {
+    // We create a temporary detached container so we don't fight CSS media queries
+    const tempContainer = document.createElement('div');
+    tempContainer.innerHTML = htmlContent;
 
-    // Force strict JS-level DOM swap so mobile browsers snapshot the actual content
-    if (appContainer) appContainer.style.setProperty('display', 'none', 'important');
-    if (header) header.style.setProperty('display', 'none', 'important');
+    // Configure html2pdf options specifically tuned for standard Receipt generation
+    const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
 
-    printArea.innerHTML = htmlContent;
-    printArea.style.setProperty('display', 'block', 'important');
-    printArea.style.setProperty('position', 'relative', 'important');
-    printArea.style.setProperty('left', '0', 'important');
-    printArea.style.setProperty('top', '0', 'important');
-    printArea.style.setProperty('width', '100%', 'important');
-    printArea.style.setProperty('opacity', '1', 'important');
-    printArea.style.setProperty('visibility', 'visible', 'important');
-
-    // Small delay to allow images (QR Code) to load and DOM to reflow
-    setTimeout(() => {
-        window.scrollTo(0, 0);
-        window.print();
-
-        // Restore the standard app interface
-        setTimeout(() => {
-            if (appContainer) appContainer.style.removeProperty('display');
-            if (header) header.style.removeProperty('display');
-            printArea.style.removeProperty('display');
-            printArea.style.removeProperty('position');
-            printArea.style.removeProperty('left');
-            printArea.style.removeProperty('top');
-            printArea.style.removeProperty('width');
-            printArea.style.removeProperty('opacity');
-            printArea.style.removeProperty('visibility');
-            printArea.innerHTML = '';
-        }, 1500); // Wait for print overlay to fully complete
-    }, 400); // 400ms is perfectly safe for mobile synchronous constraints
+    if (window.html2pdf) {
+        showToast("Generating PDF, please wait...", "success");
+        html2pdf().set(opt).from(tempContainer).save().then(() => {
+            showToast("PDF Downloaded successfully!", "success");
+        }).catch(err => {
+            console.error("PDF generation failed", err);
+            showToast("Failed to generate PDF", "error");
+        });
+    } else {
+        // Absolute worst-case fallback if the CDN fails to load
+        const printArea = document.getElementById('print-area');
+        printArea.innerHTML = htmlContent;
+        setTimeout(() => { window.print(); setTimeout(() => printArea.innerHTML = '', 1000); }, 500);
+    }
 }
 
 document.getElementById('balance-receipt-btn').addEventListener('click', () => {
@@ -798,7 +789,7 @@ document.getElementById('balance-receipt-btn').addEventListener('click', () => {
             
             ${(m.outstanding > 0 && localStorage.getItem(UPI_KEY)) ? `
             <!-- Payment QR Section -->
-            <div style="margin-top: 2rem; padding: 1.5rem; border: 2px dashed #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; background: #eff6ff;">
+            <div style="page-break-before: always; break-before: page; margin-top: 2rem; padding: 1.5rem; border: 2px dashed #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; background: #eff6ff;">
                 <div>
                     <h4 style="margin: 0 0 5px 0; color: #1e3a8a; font-size: 16px;">Scan to Pay Outstanding Balance</h4>
                     <p style="margin: 0; color: #3b82f6; font-size: 13px; font-weight: 500;">Pay securely via any UPI app (GPay, PhonePe, Paytm)</p>
@@ -818,7 +809,7 @@ document.getElementById('balance-receipt-btn').addEventListener('click', () => {
         </div>
     `;
 
-    triggerPrint(htmlContent);
+    triggerPrint(htmlContent, `Balance_Receipt_${operator.name.replace(/\\s+/g, '_')}.pdf`);
 });
 
 // 1. Generation Logic for "No Dues" Receipt (Available always but custom message based on balance)
@@ -910,7 +901,7 @@ document.getElementById('receipt-btn').addEventListener('click', () => {
             
             ${(m.outstanding > 0 && localStorage.getItem(UPI_KEY)) ? `
             <!-- Payment QR Section -->
-            <div style="margin-top: 2rem; padding: 1.5rem; border: 2px dashed #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; background: #eff6ff;">
+            <div style="page-break-before: always; break-before: page; margin-top: 2rem; padding: 1.5rem; border: 2px dashed #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; background: #eff6ff;">
                 <div>
                     <h4 style="margin: 0 0 5px 0; color: #1e3a8a; font-size: 16px;">Scan to Pay Outstanding Balance</h4>
                     <p style="margin: 0; color: #3b82f6; font-size: 13px; font-weight: 500;">Pay securely via any UPI app (GPay, PhonePe, Paytm)</p>
@@ -930,7 +921,7 @@ document.getElementById('receipt-btn').addEventListener('click', () => {
         </div>
     `;
 
-    triggerPrint(htmlContent);
+    triggerPrint(htmlContent, `No_Dues_Receipt_${operator.name.replace(/\\s+/g, '_')}.pdf`);
 });
 
 // 2. Generation Logic for Comprehensive Report PDF
@@ -1113,7 +1104,7 @@ function generateReportPdf(applyGst) {
             
             ${(displayOutstanding > 0 && localStorage.getItem(UPI_KEY)) ? `
             <!-- Payment QR Section -->
-            <div style="margin-top: 2rem; padding: 1.5rem; border: 2px dashed #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; background: #eff6ff;">
+            <div style="page-break-before: always; break-before: page; margin-top: 2rem; padding: 1.5rem; border: 2px dashed #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; background: #eff6ff;">
                 <div>
                     <h4 style="margin: 0 0 5px 0; color: #1e3a8a; font-size: 16px;">Scan to Pay Outstanding Balance</h4>
                     <p style="margin: 0; color: #3b82f6; font-size: 13px; font-weight: 500;">Pay securely via any UPI app (GPay, PhonePe, Paytm)</p>
@@ -1129,7 +1120,7 @@ function generateReportPdf(applyGst) {
         </div>
     `;
 
-    triggerPrint(htmlContent);
+    triggerPrint(htmlContent, `Tax_Report_${operator.name.replace(/\\s+/g, '_')}.pdf`);
 }
 
 // Export Logic
