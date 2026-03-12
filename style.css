@@ -47,10 +47,10 @@ body {
     background-image:
         radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.05) 0px, transparent 50%),
         radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
-    background-attachment: fixed;
     color: var(--text-main);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
 }
 
 /* Typography */
@@ -301,9 +301,8 @@ h4 {
 }
 
 .stat-card {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: var(--glass-blur);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: #ffffff;
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     padding: 1.75rem;
     display: flex;
@@ -311,6 +310,7 @@ h4 {
     gap: 1.25rem;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
     transition: var(--transition);
+    will-change: transform;
 }
 
 .stat-card:hover {
@@ -373,9 +373,8 @@ h4 {
 }
 
 .operator-card {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.8);
     border-radius: var(--radius-md);
     padding: 1.75rem;
     cursor: pointer;
@@ -383,6 +382,7 @@ h4 {
     position: relative;
     overflow: hidden;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    will-change: transform;
 }
 
 .operator-card::before {
@@ -523,12 +523,12 @@ h4 {
 }
 
 .section-card {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: var(--glass-blur);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: #ffffff;
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    will-change: transform;
 }
 
 .section-header {
