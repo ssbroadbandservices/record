@@ -515,7 +515,7 @@ function renderPlansTable(tbodyId, operator, metrics, isAdmin) {
     const displayPlans = (operator.plans || []).filter(p => !p.type.includes('18% GST') && !p.type.includes('GST 18%'));
 
     if (displayPlans.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 4}" class="empty-state">No base packages setup.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" class="empty-state">No base packages setup.</td></tr>`;
         return;
     }
 
@@ -523,12 +523,13 @@ function renderPlansTable(tbodyId, operator, metrics, isAdmin) {
         let descHtml = p.description ? `<br><span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 4px; display: inline-block;">${p.description}</span>` : '';
 
         if (!isAdmin) {
-            // Operator portal - read only, 4 columns
+            // Operator portal - read only, 5 columns
             tbody.innerHTML += `<tr>
                 <td><span class="status-badge" style="background:#f1f5f9; color:#475569;">${p.category || 'Internet'}</span></td>
                 <td><strong>${p.type}</strong>${descHtml}</td>
                 <td>${p.users}</td>
                 <td>${formatCurrency(p.rate)}</td>
+                <td><strong>${formatCurrency(p.users * p.rate)}</strong></td>
             </tr>`;
         } else {
             // Admin view - with actions, 6 columns
