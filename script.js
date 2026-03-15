@@ -21,8 +21,8 @@ let operators = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 let activeUser = JSON.parse(localStorage.getItem('hybrid_auth')) || null;
 let currentAdminViewOpId = null;
 let isInitialSync = true;
-let isDataSyncing = false;  // 👈 NEW FLAG - Double refresh rokega
-let renderScheduled = false; // 👈 NEW FLAG - Extra safety
+let isDataSyncing = false;
+let renderScheduled = false;
 
 const defaultTemplates = {
     single: "Hello {OperatorName},\n\nReminder: Your user *{UserName}*'s {Platform} ID for bundle \"{Bundle}\" is expiring on *{ExpiryDate}*.\n(Started on: {CreatedDate}).\n\nPlease renew it soon to avoid disruption.",
@@ -32,22 +32,19 @@ let msgTemplates = JSON.parse(localStorage.getItem(MSG_KEY)) || defaultTemplates
 if (!msgTemplates.single) msgTemplates.single = defaultTemplates.single;
 if (!msgTemplates.bulk) msgTemplates.bulk = defaultTemplates.bulk;
 
-// Firebase Listener - FIXED VERSION
+// Firebase Listener
 onValue(operatorsRef, (snapshot) => {
-    // Agar data already syncing ho raha hai to ignore karo
     if (isDataSyncing) return;
 
     isDataSyncing = true;
     const data = snapshot.val();
 
     if (data) {
-        // Check karo data actually change hua hai ya nahi
         const newOperators = Array.isArray(data) ? data : Object.values(data);
         if (JSON.stringify(operators) !== JSON.stringify(newOperators)) {
             operators = newOperators;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(operators));
 
-            // Sirf tab render karo jab user active ho
             if (activeUser && !renderScheduled) {
                 renderScheduled = true;
                 setTimeout(() => {
@@ -192,21 +189,17 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 let adminChartInstance = null;
 let adminFinancialChartInstance = null;
 let opChartInstance = null;
-let renderTimeout = null; // 👈 NEW - Debounce timeout
+let renderTimeout = null;
 
 function renderApp() {
-    // 👇 CLEAR ANY PENDING RENDER
     if (renderTimeout) clearTimeout(renderTimeout);
 
     renderTimeout = setTimeout(() => {
         const headerActions = document.getElementById('header-actions');
         const adminActions = document.getElementById('admin-header-actions');
         const greeting = document.getElementById('user-greeting');
-
-        // FAB button control
         const fabButton = document.getElementById('add-operator-fab');
 
-        // Apply logo if available
         const sysLogo = localStorage.getItem('jarvis_hybrid_logo') || 'logo.png';
         const logoImg = document.getElementById('company-logo');
         if (logoImg) logoImg.src = sysLogo;
@@ -214,8 +207,6 @@ function renderApp() {
         if (!activeUser) {
             headerActions.style.display = 'none';
             switchView('login');
-
-            // Hide FAB on login page
             if (fabButton) fabButton.style.display = 'none';
             return;
         }
@@ -225,8 +216,6 @@ function renderApp() {
         if (activeUser.role === 'admin') {
             adminActions.style.display = 'flex';
             greeting.textContent = 'Super Admin';
-
-            // Show FAB for admin
             if (fabButton) fabButton.style.display = 'flex';
 
             if (currentAdminViewOpId) {
@@ -238,8 +227,6 @@ function renderApp() {
             }
         } else if (activeUser.role === 'operator') {
             adminActions.style.display = 'none';
-
-            // Hide FAB for operator
             if (fabButton) fabButton.style.display = 'none';
 
             const op = operators.find(o => o.id === activeUser.id);
@@ -248,14 +235,13 @@ function renderApp() {
                 renderOperatorPortal(op);
                 switchView('opPortal');
             } else if (operators.length > 0) {
-                // Only logout if we have successfully synced from DB and the operator is actually missing
                 showToast('Your account is no longer active.', 'error');
                 document.getElementById('logout-btn').click();
             } else {
                 greeting.textContent = 'Syncing access...';
             }
         }
-    }, 50); // 👈 50ms DEBOUNCE
+    }, 50);
 }
 
 // ------ ADMIN DASHBOARD LOGIC ------
@@ -279,7 +265,6 @@ function renderAdminDashboard(searchTerm = '') {
     const globalOutstanding = globalExpected - globalPaid;
     const regularCollected = Math.max(0, globalPaid - globalBalanceAdded);
 
-    // Destroy old chart instance if exists
     if (adminChartInstance) {
         adminChartInstance.destroy();
         adminChartInstance = null;
@@ -428,7 +413,6 @@ function renderAdminOperatorDetail() {
 
     renderPlansTable('plans-tbody', op, m, true);
     renderPaymentsTable('payments-tbody', op, true);
-    // Subscribers
     renderSubscribersTable('iptv-subscribers-tbody', op, true, 'IPTV');
     renderSubscribersTable('ott-subscribers-tbody', op, true, 'OTT');
 }
@@ -448,7 +432,6 @@ function renderOperatorPortal(op) {
         else if (s.platform === 'OTT') ottCount++;
     });
 
-    // Destroy old chart instance if exists
     if (opChartInstance) {
         opChartInstance.destroy();
         opChartInstance = null;
@@ -503,7 +486,6 @@ function renderOperatorPortal(op) {
 
     renderPlansTable('op-portal-plans-tbody', op, m, false);
     renderPaymentsTable('op-portal-payments-tbody', op, false);
-    // Subscribers portal read only
     renderSubscribersTable('op-portal-iptv-subscribers-tbody', op, false, 'IPTV');
     renderSubscribersTable('op-portal-ott-subscribers-tbody', op, false, 'OTT');
 }
@@ -512,30 +494,32 @@ function renderOperatorPortal(op) {
 function renderPlansTable(tbodyId, operator, metrics, isAdmin) {
     const tbody = document.getElementById(tbodyId);
     tbody.innerHTML = '';
-    const displayPlans = (operator.plans || []).filter(p => !p.type.includes('18% GST') && !p.type.includes('GST 18%'));
+    
+    // सिर्फ वही पैक्स लो जिनमें यूजर्स > 0 हो
+    const displayPlans = (operator.plans || [])
+        .filter(p => !p.type.includes('18% GST') && !p.type.includes('GST 18%'))
+        .filter(p => parseInt(p.users || 0) > 0);  // सिर्फ यूजर्स वाले पैक्स
 
     if (displayPlans.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" class="empty-state">No base packages setup.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" class="empty-state">No active packages with users.</td></tr>`;
         return;
     }
 
     displayPlans.forEach(p => {
-        let descHtml = p.description ? `<br><span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 4px; display: inline-block;">${p.description}</span>` : '';
-
         if (!isAdmin) {
-            // Operator portal - read only, 5 columns
+            // Operator portal - read only, 5 columns (बिना डिस्क्रिप्शन के)
             tbody.innerHTML += `<tr>
                 <td><span class="status-badge" style="background:#f1f5f9; color:#475569;">${p.category || 'Internet'}</span></td>
-                <td><strong>${p.type}</strong>${descHtml}</td>
+                <td><strong>${p.type}</strong></td>
                 <td>${p.users}</td>
                 <td>${formatCurrency(p.rate)}</td>
                 <td><strong>${formatCurrency(p.users * p.rate)}</strong></td>
             </tr>`;
         } else {
-            // Admin view - with actions, 6 columns
+            // Admin view - with actions, 6 columns (बिना डिस्क्रिप्शन के)
             tbody.innerHTML += `<tr>
                 <td><span class="status-badge" style="background:#f1f5f9; color:#475569;">${p.category || 'Internet'}</span></td>
-                <td><strong>${p.type}</strong>${descHtml}</td>
+                <td><strong>${p.type}</strong></td>
                 <td>${p.users}</td>
                 <td>${formatCurrency(p.rate)}</td>
                 <td><strong>${formatCurrency(p.users * p.rate)}</strong></td>
@@ -569,7 +553,6 @@ function renderPaymentsTable(tbodyId, operator, isAdmin) {
         let statStyle = p.status === 'Paid' ? 'badge-paid' : 'badge-unpaid';
 
         if (!isAdmin) {
-            // Operator portal - read only, 4 columns
             tbody.innerHTML += `<tr>
                 <td>${formatDate(p.date)}</td>
                 <td>${p.type}</td>
@@ -577,7 +560,6 @@ function renderPaymentsTable(tbodyId, operator, isAdmin) {
                 <td><span class="status-badge ${statStyle}">${p.status}</span></td>
             </tr>`;
         } else {
-            // Admin view - with actions, 5 columns
             tbody.innerHTML += `<tr>
                 <td>${formatDate(p.date)}</td>
                 <td>${p.type}</td>
@@ -607,7 +589,6 @@ function renderSubscribersTable(tbodyId, operator, isAdmin, platformType) {
         else if (expStatus.days < 0) tr.style.backgroundColor = '#fef2f2';
 
         if (isAdmin) {
-            // Admin view - with all action buttons
             tr.innerHTML = `
                 <td><strong>${sub.name}</strong></td>
                 <td><span style="font-size: 11px; padding: 2px 6px; background: #e2e8f0; border-radius: 4px; border: 1px solid #cbd5e1;">${sub.platform}</span><br><span style="margin-top:4px; display:inline-block;">${sub.bundle}</span></td>
@@ -625,7 +606,6 @@ function renderSubscribersTable(tbodyId, operator, isAdmin, platformType) {
                 </td>
             `;
         } else {
-            // Operator portal - read only, 5 columns (no action buttons)
             tr.innerHTML = `
                 <td><strong>${sub.name}</strong></td>
                 <td><span style="font-size: 11px; padding: 2px 6px; background: #e2e8f0; border-radius: 4px; border: 1px solid #cbd5e1;">${sub.platform}</span><br><span style="margin-top:4px; display:inline-block;">${sub.bundle}</span></td>
@@ -673,11 +653,10 @@ function openChartDetails(targetOps) {
     openModal('chart-details-modal');
 }
 
-// ------ PDF GENERATION (WITH DOUBLE CLICK PROTECTION) ------
+// ------ PDF GENERATION ------
 let isGeneratingPDF = false;
 
 function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
-    // Prevent double PDF generation
     if (isGeneratingPDF) {
         showToast("Already generating PDF, please wait...", "warning");
         return;
@@ -694,7 +673,6 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
 
     const tempContainer = document.createElement('div');
     tempContainer.innerHTML = `<div style="padding: 3rem; background: #ffffff; color: #1e293b; font-family: 'Inter', sans-serif; box-sizing: border-box; position: relative;">
-        <!-- Header Section -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 1.5rem; margin-bottom: 2rem;">
             <div style="text-align: left;">
                 <img src="${logoSrc}" style="max-height: 55px; display: block;" onerror="this.style.display='none'">
@@ -712,13 +690,11 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
         <!-- Main Content -->
         ${htmlContent}
         
-        <!-- Separate Page for QR & Signature if present or always -->
         <div style="page-break-before: always; margin-top: 5rem; padding-top: 2rem;">
             <div style="border-top: 2px dashed #e2e8f0; padding-top: 2rem;">
                 <h3 style="margin-bottom: 2rem; color: #0f172a; font-size: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">Authentication & Digital Payment</h3>
                 ${qrHtml}
                 
-                <!-- Footer Signatory -->
                 <div style="margin-top: 4rem; text-align: right; position: relative;">
                     <div style="display: inline-block; text-align: center;">
                         <img src="${sealSrc}" style="height: 110px; mix-blend-mode: multiply; filter: contrast(1.2) grayscale(100%); display: block; margin: 0 auto; object-fit: contain; transform: translateY(20px);" onerror="this.style.display='none'" alt="Seal and Signature">
@@ -765,7 +741,6 @@ function handleDownloadBal() {
     const op = operators.find(o => o.id === (activeUser.role === 'admin' ? currentAdminViewOpId : activeUser.id));
     if (!op) return;
     const m = calculateOperatorMetrics(op);
-    // Notice we do NOT pass qrHtml as it's a balance statement without actual dynamic invoice table, but if needed, we could.
     triggerPrint(`
         <div style="text-align:center; padding: 2rem 0;">
             <p style="font-size:12px; color:#4f46e5; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin:0;">Financial Notice</p>
@@ -848,7 +823,6 @@ function handleDownloadRpt(e) {
 
     let gstInfo = gstNo ? `<br><span style="font-size:11px; color:#64748b;">GSTIN: ${gstNo}</span>` : '';
 
-    // Remove op name from top of table, it's in the header now
     triggerPrint(`<div>
         <div style="text-align:center; padding-bottom:1.5rem;">
             <p style="font-size:13px; color:#4f46e5; font-weight:800; text-transform:uppercase; letter-spacing:2px; margin:0;">Comprehensive Tax Invoice</p>
@@ -967,12 +941,10 @@ document.getElementById('op-menu-btn')?.addEventListener('click', () => {
 
 // Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    // Service Worker Registration
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW failed', err));
     }
 
-    // Close modal handlers
     document.querySelectorAll('.close-modal, .cancel-modal').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const modal = e.target.closest('.modal-overlay');
@@ -985,7 +957,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Login form
     document.getElementById('login-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const u = document.getElementById('login-username').value.trim();
@@ -1010,7 +981,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Logout button
     document.getElementById('logout-btn').addEventListener('click', () => {
         activeUser = null;
         currentAdminViewOpId = null;
@@ -1019,7 +989,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderApp();
     });
 
-    // Admin Settings Form
     document.getElementById('admin-settings-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const newPass = document.getElementById('admin-pass-change').value;
@@ -1047,7 +1016,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal('admin-settings-modal');
     });
 
-    // UPI Form
     document.getElementById('upi-form').addEventListener('submit', (e) => {
         e.preventDefault();
         localStorage.setItem(UPI_KEY, document.getElementById('upi-id').value.trim());
@@ -1056,7 +1024,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal('upi-modal');
     });
 
-    // Message Templates Form
     document.getElementById('msg-form').addEventListener('submit', (e) => {
         e.preventDefault();
         msgTemplates.single = document.getElementById('msg-single').value;
@@ -1066,10 +1033,8 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal('msg-modal');
     });
 
-    // Report Form
     document.getElementById('report-form').addEventListener('submit', handleDownloadRpt);
 
-    // Operator Form
     document.getElementById('operator-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const id = document.getElementById('op-id').value;
@@ -1121,7 +1086,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal('operator-modal');
     });
 
-    // Plan Form
     document.getElementById('plan-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const planId = document.getElementById('plan-id').value;
@@ -1144,7 +1108,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Payment Form
     document.getElementById('payment-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const op = operators.find(o => o.id === currentAdminViewOpId);
@@ -1157,7 +1120,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Subscriber Form
     document.getElementById('sub-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const opId = activeUser.role === 'admin' ? currentAdminViewOpId : activeUser.id;
@@ -1185,20 +1147,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Platform change event
     document.getElementById('sub-platform').addEventListener('change', (e) => {
         const opId = activeUser.role === 'admin' ? currentAdminViewOpId : activeUser.id;
         const op = operators.find(o => o.id === opId);
         populatePacksDropdown(op, e.target.value);
     });
 
-    // Confirm button
     document.getElementById('confirm-btn').addEventListener('click', () => {
         if (confirmAction) confirmAction();
         closeModal('confirm-modal');
     });
 
-    // Admin Settings button
     document.getElementById('admin-settings-btn')?.addEventListener('click', () => {
         document.getElementById('admin-pass-change').value = '';
         document.getElementById('admin-bot-token').value = localStorage.getItem(BOT_TOKEN_KEY) || '';
@@ -1207,24 +1166,20 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal('admin-settings-modal');
     });
 
-    // Config UPI button
     document.getElementById('config-upi-btn')?.addEventListener('click', () => {
         document.getElementById('upi-id').value = localStorage.getItem(UPI_KEY) || '';
         document.getElementById('gst-number').value = localStorage.getItem(GST_KEY) || '';
         openModal('upi-modal');
     });
 
-    // Config Messages button
     document.getElementById('config-msg-btn')?.addEventListener('click', () => {
         document.getElementById('msg-single').value = msgTemplates.single;
         document.getElementById('msg-bulk').value = msgTemplates.bulk;
         openModal('msg-modal');
     });
 
-    // Search operator
     document.getElementById('search-operator')?.addEventListener('input', (e) => renderAdminDashboard(e.target.value));
 
-    // Add operator FAB
     document.getElementById('add-operator-fab')?.addEventListener('click', () => {
         document.getElementById('operator-form').reset();
         document.getElementById('op-id').value = '';
@@ -1233,13 +1188,11 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal('operator-modal');
     });
 
-    // Admin back button
     document.getElementById('admin-back-to-dash')?.addEventListener('click', () => {
         currentAdminViewOpId = null;
         renderApp();
     });
 
-    // Edit operator button
     document.getElementById('edit-op-info-btn')?.addEventListener('click', () => {
         const op = operators.find(o => o.id === currentAdminViewOpId);
         if (op) {
@@ -1252,14 +1205,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('op-chat-id').value = op.chatId || '';
             document.getElementById('op-address').value = op.address || '';
 
-            // IPTV packs
             let iptvPacks = (op.plans || []).filter(p => p.category === 'IPTV');
             const iCont = document.getElementById('iptv-rows-container');
             iCont.innerHTML = '';
             if (iptvPacks.length === 0) iptvPacks = [{}];
             iptvPacks.forEach((p, idx) => {
                 iCont.insertAdjacentHTML('beforeend', `
-            < div class="form-group iptv-row" style = "padding: 10px; background: rgba(16, 185, 129, 0.05); border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 0.5rem; position: relative;" >
+            <div class="form-group iptv-row" style="padding: 10px; background: rgba(16, 185, 129, 0.05); border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 0.5rem; position: relative;">
                     <label style="color: #10b981; display:flex; justify-content:space-between; align-items:center;">
                         <span><i class="fa-solid fa-tv"></i> IPTV Package</span>
                         ${idx > 0 ? '<button type="button" class="btn-icon text-danger" onclick="this.closest(\'.iptv-row\').remove()" style="padding:0;"><i class="fa-solid fa-xmark"></i></button>' : ''}
@@ -1272,14 +1224,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>`);
             });
 
-            // OTT packs
             let ottPacks = (op.plans || []).filter(p => p.category === 'OTT');
             const oCont = document.getElementById('ott-rows-container');
             oCont.innerHTML = '';
             if (ottPacks.length === 0) ottPacks = [{}];
             ottPacks.forEach((p, idx) => {
                 oCont.insertAdjacentHTML('beforeend', `
-            < div class="form-group ott-row" style = "padding: 10px; background: rgba(245, 158, 11, 0.05); border-radius: 8px; border: 1px dashed #f59e0b; margin-bottom: 0.5rem; position: relative;" >
+            <div class="form-group ott-row" style="padding: 10px; background: rgba(245, 158, 11, 0.05); border-radius: 8px; border: 1px dashed #f59e0b; margin-bottom: 0.5rem; position: relative;">
                     <label style="color: #f59e0b; display:flex; justify-content:space-between; align-items:center;">
                         <span><i class="fa-solid fa-mobile-screen"></i> OTT Package</span>
                         ${idx > 0 ? '<button type="button" class="btn-icon text-danger" onclick="this.closest(\'.ott-row\').remove()" style="padding:0;"><i class="fa-solid fa-xmark"></i></button>' : ''}
@@ -1297,7 +1248,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Bulk remind button
     document.getElementById('remind-all-expiring-btn')?.addEventListener('click', async () => {
         const op = operators.find(o => o.id === currentAdminViewOpId);
         if (!op || !op.subscribers) return;
@@ -1332,13 +1282,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Report button
     document.getElementById('report-btn')?.addEventListener('click', () => openModal('report-modal'));
 
-    // Balance receipt button
     document.getElementById('balance-receipt-btn')?.addEventListener('click', handleDownloadBal);
 
-    // No dues receipt button
     document.getElementById('receipt-btn')?.addEventListener('click', () => {
         const op = operators.find(o => o.id === currentAdminViewOpId);
         if (!op) return;
@@ -1357,7 +1304,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `, `No_Dues_${op.name.replace(/\s+/g, '_')}.pdf`, '', op.name);
     });
 
-    // Delete operator button
     document.getElementById('delete-op-btn')?.addEventListener('click', () => {
         confirmDelete('Delete Firm Info', 'Delete this firm and completely wipe its data?', () => {
             operators = operators.filter(o => o.id !== currentAdminViewOpId);
@@ -1367,7 +1313,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Add GST button
     document.getElementById('add-gst-btn')?.addEventListener('click', () => {
         const op = operators.find(o => o.id === currentAdminViewOpId);
         if (!op) return;
@@ -1380,7 +1325,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Remove GST button
     document.getElementById('remove-gst-btn')?.addEventListener('click', () => {
         const op = operators.find(o => o.id === currentAdminViewOpId);
         if (!op) return;
@@ -1390,21 +1334,18 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('GST removed');
     });
 
-    // Add Plan button
     document.getElementById('add-plan-btn')?.addEventListener('click', () => {
         document.getElementById('plan-form').reset();
         document.getElementById('plan-id').value = '';
         openModal('plan-modal');
     });
 
-    // Add Payment button
     document.getElementById('add-payment-btn')?.addEventListener('click', () => {
         document.getElementById('payment-form').reset();
         document.getElementById('payment-date').valueAsDate = new Date();
         openModal('payment-modal');
     });
 
-    // Add Subscriber button
     document.getElementById('add-sub-btn')?.addEventListener('click', () => {
         document.getElementById('sub-form').reset();
         document.getElementById('sub-id').value = '';
@@ -1414,9 +1355,8 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal('sub-modal');
     });
 
-    // Initial render
     renderApp();
-    // Helper functions
+
     window.addIptvRow = function () {
         document.getElementById('iptv-rows-container').insertAdjacentHTML('beforeend', `
     <div class="form-group iptv-row" style="padding: 10px; background: rgba(16, 185, 129, 0.05); border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 0.5rem; position: relative;">
@@ -1585,7 +1525,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Auto Telegram reminders
     setInterval(async () => {
         const token = localStorage.getItem(BOT_TOKEN_KEY);
         if (!token) return;
