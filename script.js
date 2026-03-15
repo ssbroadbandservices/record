@@ -692,27 +692,28 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
         <!-- Main Content -->
         ${htmlContent}
         
-        <!-- QR & Signature - अब एक ही पेज पर, page-break हटाया -->
-        <div style="margin-top: 4rem; padding-top: 2rem;">
-            <div style="border-top: 2px dashed #e2e8f0; padding-top: 2rem;">
-                <h3 style="margin-bottom: 2rem; color: #0f172a; font-size: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">Authentication & Digital Payment</h3>
-                ${qrHtml}
-                
-                <!-- Footer Signatory -->
-                <div style="margin-top: 4rem; text-align: right; position: relative;">
-                    <div style="display: inline-block; text-align: center;">
-                        <img src="${sealSrc}" style="height: 140px; width: auto; mix-blend-mode: multiply; filter: contrast(1.2) grayscale(100%); display: block; margin: 0 auto; object-fit: contain;" onerror="this.style.display='none'" alt="Seal and Signature">
-                        <div style="border-top: 2px solid #cbd5e1; padding-top: 15px; width: 220px; margin-top: 15px;">
-                            <p style="margin: 0; font-weight: 700; font-size: 16px; color: #0f172a;">Authorized Signatory</p>
-                            <p style="margin: 5px 0 0; font-size: 13px; color: #64748b;">Hybrid Internet Management</p>
-                        </div>
-                    </div>
+        <!-- QR & Signature - बिल के साथ ही, कोई extra page नहीं -->
+        ${qrHtml}
+        
+        <!-- Footer Signatory -->
+        <div style="margin-top: 4rem; text-align: right; position: relative; border-top: 2px dashed #e2e8f0; padding-top: 2rem;">
+            <div style="display: inline-block; text-align: center;">
+                <img src="${sealSrc}" style="height: 140px; width: auto; mix-blend-mode: multiply; filter: contrast(1.2) grayscale(100%); display: block; margin: 0 auto; object-fit: contain;" onerror="this.style.display='none'" alt="Seal and Signature">
+                <div style="border-top: 2px solid #cbd5e1; padding-top: 15px; width: 220px; margin-top: 15px;">
+                    <p style="margin: 0; font-weight: 700; font-size: 16px; color: #0f172a;">Authorized Signatory</p>
+                    <p style="margin: 5px 0 0; font-size: 13px; color: #64748b;">Hybrid Internet Management</p>
                 </div>
             </div>
         </div>
     </div>`;
 
-    const opt = { margin: 0, filename, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
+    const opt = { 
+        margin: 0, 
+        filename, 
+        image: { type: 'jpeg', quality: 0.98 }, 
+        html2canvas: { scale: 2, useCORS: true, logging: false }, 
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } 
+    };
 
     if (window.html2pdf) {
         showToast("Generating Document...");
@@ -741,23 +742,6 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
     }
 }
 
-function handleDownloadBal() {
-    const op = operators.find(o => o.id === (activeUser.role === 'admin' ? currentAdminViewOpId : activeUser.id));
-    if (!op) return;
-    const m = calculateOperatorMetrics(op);
-    triggerPrint(`
-        <div style="text-align:center; padding: 2rem 0;">
-            <p style="font-size:12px; color:#4f46e5; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin:0;">Financial Notice</p>
-            <h2 style="margin:8px 0 0 0; font-size:28px; color:#0f172a; font-weight:800;">Balance Reminder Statement</h2>
-            <div style="padding: 3rem; background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); border: 1px solid #fecdd3; border-radius: 20px; margin: 3rem auto; max-width: 450px; box-shadow: 0 10px 15px -3px rgba(225, 29, 72, 0.1);">
-                <p style="font-size: 14px; color:#e11d48; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Current Outstanding Due</p>
-                <h1 style="color:#9f1239; margin:10px 0 0 0; font-size: 4rem; font-weight: 900; letter-spacing: -1px;">${formatCurrency(m.outstanding)}</h1>
-            </div>
-            <p style="font-size:14px; color:#475569; line-height: 1.6; max-width: 500px; margin: 0 auto;">Please coordinate with the administration to clear the pending balance to ensure unaffected continuation of digital services.</p>
-        </div>
-    `, `Balance_Statement_${op.name.replace(/\s+/g, '_')}.pdf`, '', op.name);
-}
-
 function handleDownloadRpt(e) {
     if (e) {
         e.preventDefault();
@@ -772,25 +756,22 @@ function handleDownloadRpt(e) {
     const reportGstChecked = e ? document.getElementById('report-gst').checked : op.applyGst;
 
     let qrHtml = '';
-    // QR Code - सही encoding के साथ
+    // QR Code - सीधा UPI लिंक के साथ
     if (upiId && upiId.trim() !== '' && m.outstanding > 0) {
-        // UPI ID को properly encode करो
-        const encodedUpiId = encodeURIComponent(upiId.trim());
         const amount = m.outstanding.toFixed(2);
-        const upiLink = `upi://pay?pa=${encodedUpiId}&pn=Hybrid%20Internet&am=${amount}&cu=INR`;
+        const upiString = `upi://pay?pa=${upiId}&pn=Hybrid%20Internet&am=${amount}&cu=INR`;
         
-        console.log("UPI Link:", upiLink); // Debug के लिए
+        // सीधा QR code API कॉल
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
         
-        qrHtml = `<div style="text-align: center; margin: 2rem 0; border-top: 1px dashed #cbd5e1; padding-top: 2rem;">
-            <p style="font-weight: 600; font-size: 16px; margin-bottom: 15px;">Scan to Pay instantly via Any UPI App</p>
-            <div style="border: 2px solid #e2e8f0; padding: 15px; display: inline-block; border-radius: 12px; background: white;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiLink)}" alt="UPI QR" style="display: block; width: 200px; height: 200px;" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x200?text=QR+Error';">
+        qrHtml = `<div style="text-align: center; margin: 2rem 0; padding: 1.5rem; background: #f8fafc; border-radius: 12px;">
+            <p style="font-weight: 600; font-size: 16px; margin-bottom: 20px; color: #0f172a;">📱 Scan & Pay with any UPI App</p>
+            <div style="border: 2px solid #e2e8f0; padding: 15px; display: inline-block; border-radius: 16px; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                <img src="${qrUrl}" alt="UPI QR Code" style="display: block; width: 200px; height: 200px; border-radius: 8px;">
             </div>
-            <p style="font-size: 14px; color: #64748b; margin-top: 12px;">UPI ID: <strong>${upiId}</strong></p>
-            <p style="font-size: 18px; color: #0f172a; font-weight: 700; margin-top: 8px;">Amount: ${formatCurrency(m.outstanding)}</p>
+            <p style="font-size: 14px; color: #475569; margin-top: 15px;">UPI ID: <strong style="color: #0f172a;">${upiId}</strong></p>
+            <p style="font-size: 20px; color: #059669; font-weight: 700; margin-top: 10px;">Amount: ${formatCurrency(m.outstanding)}</p>
         </div>`;
-    } else {
-        console.log("QR not generated - UPI:", upiId, "Amount:", m.outstanding);
     }
 
     let gstRow = '';
@@ -894,85 +875,6 @@ function handleDownloadRpt(e) {
         </div>
     </div>`, `Premium_Invoice_${op.name.replace(/\s+/g, '_')}.pdf`, qrHtml, op.name);
 }
-
-    // IPTV/OTT subscribers को भी बिल में ऐड करो
-    let trackerMap = {};
-    (op.subscribers || []).forEach(s => {
-        if (!trackerMap[s.platform]) trackerMap[s.platform] = { count: 0, revenue: 0 };
-        trackerMap[s.platform].count++;
-        trackerMap[s.platform].revenue += parseFloat(s.rate || 0);
-    });
-    for (const [plat, data] of Object.entries(trackerMap)) {
-        if (data.revenue > 0) {
-            subTableLines += `<tr style="background:#f0f9ff;">
-                <td style="text-align:left; border:1px solid #e2e8f0; padding:12px;">${plat}</td>
-                <td style="text-align:left; border:1px solid #e2e8f0; padding:12px;"><strong>Individual Tracked Users</strong></td>
-                <td style="text-align:center; border:1px solid #e2e8f0; padding:12px;">${data.count} Users</td>
-                <td style="text-align:center; border:1px solid #e2e8f0; padding:12px; font-weight:600; color:#0284c7;">${formatCurrency(data.revenue)}</td>
-            </tr>`;
-        }
-    }
-
-    if (!subTableLines) subTableLines = `<tr><td colspan="4" style="text-align:center; padding:12px;">No active billing lines</td></tr>`;
-
-    let gstInfo = gstNo ? `<br><span style="font-size:11px; color:#64748b;">GSTIN: ${gstNo}</span>` : '';
-
-    triggerPrint(`<div>
-        <div style="text-align:center; padding-bottom:1.5rem;">
-            <p style="font-size:13px; color:#4f46e5; font-weight:800; text-transform:uppercase; letter-spacing:2px; margin:0;">Comprehensive Tax Invoice</p>
-            <h2 style="margin:5px 0 0 0; font-size:24px; color:#0f172a;">Monthly Operations Report</h2>
-        </div>
-        
-        <table style="width:100%; margin-bottom:2rem; border-collapse: collapse; font-size:14px; background: #f8fafc; border-radius: 12px; overflow: hidden;">
-            <tr>
-                <td style="padding:20px; vertical-align:top; width:50%; border-right: 1px solid #e2e8f0;">
-                    <p style="margin:0 0 5px 0; color:#4f46e5; font-size:12px; text-transform:uppercase; font-weight: 700;">Account Contact details</p>
-                    <h3 style="margin:0 0 5px 0; font-size:18px; color:#0f172a;">${op.name}</h3>
-                    <p style="margin:5px 0; color:#334155;"><i class="fa-solid fa-phone" style="color: #94a3b8; font-size: 11px; margin-right: 5px;"></i> ${op.phone || '-'}</p>
-                    <p style="margin:5px 0; color:#334155;"><i class="fa-solid fa-location-dot" style="color: #94a3b8; font-size: 11px; margin-right: 5px;"></i> ${op.address || '-'}</p>
-                    <p style="margin:5px 0; color:#334155;"><i class="fa-solid fa-plug" style="color: #94a3b8; font-size: 11px; margin-right: 5px;"></i> Port: ${op.portDetails || '-'}</p>
-                </td>
-                <td style="padding:20px; vertical-align:top; text-align:right;">
-                    <p style="margin:0 0 5px 0; color:#4f46e5; font-size:12px; text-transform:uppercase; font-weight: 700;">Performance Snapshot</p>
-                    <p style="margin:0 0 5px 0; font-size:14px; color:#334155;">Total Services Linked: <strong style="color: #0f172a;">${m.totalUsers} Active</strong></p>
-                    <p style="margin:0 0 5px 0; font-size:14px; color:#334155;">Previous Cleared Payments: <strong style="color: #10b981;">${formatCurrency(m.totalPaid)}</strong></p>
-                    ${gstInfo}
-                </td>
-            </tr>
-        </table>
-
-        <h3 style="margin:0 0 15px 0; font-size:15px; color:#0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">Breakdown of Allocated Services:</h3>
-        <table style="width:100%; border-collapse: collapse; margin-bottom: 2.5rem; font-size:13px; border-radius:8px; overflow:hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-            <thead>
-                <tr style="background:#4f46e5; color:#ffffff;">
-                    <th style="padding:15px; text-align:left; font-weight: 600;">Service Category</th>
-                    <th style="padding:15px; text-align:left; font-weight: 600;">Packages / Description</th>
-                    <th style="padding:15px; text-align:center; font-weight: 600;">Volume × Rate</th>
-                    <th style="padding:15px; text-align:center; font-weight: 600;">Line Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${subTableLines}
-                <tr style="background: #f1f5f9;">
-                    <td colspan="3" style="text-align:right; border:1px solid #e2e8f0; padding:15px; color:#475569;"><strong>Subtotal (Without Taxes):</strong></td>
-                    <td style="text-align:center; border:1px solid #e2e8f0; padding:15px; font-weight:800; color: #0f172a; font-size: 14px;">${formatCurrency(m.baseRevenue)}</td>
-                </tr>
-                ${gstRow}
-            </tbody>
-        </table>
-        
-        <div style="background: ${currentOutstanding > 0 ? 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)' : 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)'}; border: 1px solid ${currentOutstanding > 0 ? '#fecdd3' : '#bbf7d0'}; border-radius: 16px; padding: 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);">
-            <div style="text-align: left;">
-                <p style="margin:0 0 5px 0; color: ${currentOutstanding > 0 ? '#be123c' : '#15803d'}; font-size: 15px; font-weight: 700; text-transform: uppercase;">Total Aggregate Due / Outstanding Amount</p>
-                <p style="margin:0; font-size: 13px; color: ${currentOutstanding > 0 ? '#e11d48' : '#22c55e'};">All previous payments have been accounted for.</p>
-            </div>
-            <h2 style="margin:0; color: ${currentOutstanding > 0 ? '#9f1239' : '#166534'}; font-size: 36px; font-weight: 900; letter-spacing: -1px;">
-                ${formatCurrency(currentOutstanding)}
-            </h2>
-        </div>
-    </div>`, `Premium_Invoice_${op.name.replace(/\s+/g, '_')}.pdf`, qrHtml, op.name);
-}
-
 // PWA Install Logic
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
