@@ -126,7 +126,6 @@ function calculateOperatorMetrics(operator) {
     let totalUsers = realPlans.reduce((sum, p) => sum + parseInt(p.users || 0), 0);
     let baseRevenue = realPlans.reduce((sum, p) => sum + (parseInt(p.users || 0) * parseFloat(p.rate || 0)), 0);
 
-    // IPTV/OTT subscribers को भी रेवेन्यू में ऐड करो
     (operator.subscribers || []).forEach(sub => {
         totalUsers += 1;
         baseRevenue += parseFloat(sub.rate || 0);
@@ -674,7 +673,6 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
 
     const tempContainer = document.createElement('div');
     tempContainer.innerHTML = `<div style="padding: 3rem; background: #ffffff; color: #1e293b; font-family: 'Inter', sans-serif; box-sizing: border-box; position: relative;">
-        <!-- Header Section -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 1.5rem; margin-bottom: 2rem;">
             <div style="text-align: left;">
                 <img src="${logoSrc}" style="max-height: 55px; display: block;" onerror="this.style.display='none'">
@@ -692,28 +690,25 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
         <!-- Main Content -->
         ${htmlContent}
         
-        <!-- QR & Signature - बिल के साथ ही, कोई extra page नहीं -->
-        ${qrHtml}
-        
-        <!-- Footer Signatory -->
-        <div style="margin-top: 4rem; text-align: right; position: relative; border-top: 2px dashed #e2e8f0; padding-top: 2rem;">
-            <div style="display: inline-block; text-align: center;">
-                <img src="${sealSrc}" style="height: 140px; width: auto; mix-blend-mode: multiply; filter: contrast(1.2) grayscale(100%); display: block; margin: 0 auto; object-fit: contain;" onerror="this.style.display='none'" alt="Seal and Signature">
-                <div style="border-top: 2px solid #cbd5e1; padding-top: 15px; width: 220px; margin-top: 15px;">
-                    <p style="margin: 0; font-weight: 700; font-size: 16px; color: #0f172a;">Authorized Signatory</p>
-                    <p style="margin: 5px 0 0; font-size: 13px; color: #64748b;">Hybrid Internet Management</p>
+        <div style="page-break-before: always; margin-top: 5rem; padding-top: 2rem;">
+            <div style="border-top: 2px dashed #e2e8f0; padding-top: 2rem;">
+                <h3 style="margin-bottom: 2rem; color: #0f172a; font-size: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">Authentication & Digital Payment</h3>
+                ${qrHtml}
+                
+                <div style="margin-top: 4rem; text-align: right; position: relative;">
+                    <div style="display: inline-block; text-align: center;">
+                        <img src="${sealSrc}" style="height: 110px; mix-blend-mode: multiply; filter: contrast(1.2) grayscale(100%); display: block; margin: 0 auto; object-fit: contain; transform: translateY(20px);" onerror="this.style.display='none'" alt="Seal and Signature">
+                        <div style="border-top: 1px solid #cbd5e1; padding-top: 10px; width: 180px; margin-top: 10px;">
+                            <p style="margin: 0; font-weight: 700; font-size: 14px; color: #0f172a;">Authorized Signatory</p>
+                            <p style="margin: 0; font-size: 11px; color: #64748b;">Hybrid Internet Management</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>`;
 
-    const opt = { 
-        margin: 0, 
-        filename, 
-        image: { type: 'jpeg', quality: 0.98 }, 
-        html2canvas: { scale: 2, useCORS: true, logging: false }, 
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } 
-    };
+    const opt = { margin: 0, filename, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, pagebreak: { mode: ['css', 'legacy'] }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
 
     if (window.html2pdf) {
         showToast("Generating Document...");
@@ -742,6 +737,23 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
     }
 }
 
+function handleDownloadBal() {
+    const op = operators.find(o => o.id === (activeUser.role === 'admin' ? currentAdminViewOpId : activeUser.id));
+    if (!op) return;
+    const m = calculateOperatorMetrics(op);
+    triggerPrint(`
+        <div style="text-align:center; padding: 2rem 0;">
+            <p style="font-size:12px; color:#4f46e5; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin:0;">Financial Notice</p>
+            <h2 style="margin:8px 0 0 0; font-size:28px; color:#0f172a; font-weight:800;">Balance Reminder Statement</h2>
+            <div style="padding: 3rem; background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); border: 1px solid #fecdd3; border-radius: 20px; margin: 3rem auto; max-width: 450px; box-shadow: 0 10px 15px -3px rgba(225, 29, 72, 0.1);">
+                <p style="font-size: 14px; color:#e11d48; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Current Outstanding Due</p>
+                <h1 style="color:#9f1239; margin:10px 0 0 0; font-size: 4rem; font-weight: 900; letter-spacing: -1px;">${formatCurrency(m.outstanding)}</h1>
+            </div>
+            <p style="font-size:14px; color:#475569; line-height: 1.6; max-width: 500px; margin: 0 auto;">Please coordinate with the administration to clear the pending balance to ensure unaffected continuation of digital services.</p>
+        </div>
+    `, `Balance_Statement_${op.name.replace(/\s+/g, '_')}.pdf`, '', op.name);
+}
+
 function handleDownloadRpt(e) {
     if (e) {
         e.preventDefault();
@@ -756,21 +768,14 @@ function handleDownloadRpt(e) {
     const reportGstChecked = e ? document.getElementById('report-gst').checked : op.applyGst;
 
     let qrHtml = '';
-    // QR Code - सीधा UPI लिंक के साथ
-    if (upiId && upiId.trim() !== '' && m.outstanding > 0) {
-        const amount = m.outstanding.toFixed(2);
-        const upiString = `upi://pay?pa=${upiId}&pn=Hybrid%20Internet&am=${amount}&cu=INR`;
-        
-        // सीधा QR code API कॉल
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
-        
-        qrHtml = `<div style="text-align: center; margin: 2rem 0; padding: 1.5rem; background: #f8fafc; border-radius: 12px;">
-            <p style="font-weight: 600; font-size: 16px; margin-bottom: 20px; color: #0f172a;">📱 Scan & Pay with any UPI App</p>
-            <div style="border: 2px solid #e2e8f0; padding: 15px; display: inline-block; border-radius: 16px; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-                <img src="${qrUrl}" alt="UPI QR Code" style="display: block; width: 200px; height: 200px; border-radius: 8px;">
+    if (upiId && m.outstanding > 0) {
+        const upiLink = `upi://pay?pa=${upiId}&pn=Hybrid+Internet&am=${m.outstanding.toFixed(2)}&cu=INR`;
+        qrHtml = `<div style="text-align: center; margin-top: 2rem; border-top: 1px dashed #cbd5e1; padding-top: 2rem;">
+            <p style="font-weight: 600; font-size: 14px; margin-bottom: 10px;">Scan to Pay instantly via Any UPI App</p>
+            <div style="border: 2px solid #e2e8f0; padding: 10px; display: inline-block; border-radius: 12px; background: white;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(upiLink)}" alt="UPI QR" style="display: block;">
             </div>
-            <p style="font-size: 14px; color: #475569; margin-top: 15px;">UPI ID: <strong style="color: #0f172a;">${upiId}</strong></p>
-            <p style="font-size: 20px; color: #059669; font-weight: 700; margin-top: 10px;">Amount: ${formatCurrency(m.outstanding)}</p>
+            <p style="font-size: 12px; color: #64748b; margin-top: 8px;">UPI ID: <strong>${upiId}</strong></p>
         </div>`;
     }
 
@@ -787,8 +792,7 @@ function handleDownloadRpt(e) {
     const currentOutstanding = finalExpected - m.totalPaid;
 
     let subTableLines = '';
-    // Plans से लाइनें
-    const displayPlans = (op.plans || []).filter(p => !p.type.includes('18% GST') && parseInt(p.users || 0) > 0);
+    const displayPlans = (op.plans || []).filter(p => !p.type.includes('18% GST'));
     displayPlans.forEach(p => {
         subTableLines += `<tr>
             <td style="text-align:left; border:1px solid #e2e8f0; padding:12px;">${p.category}</td>
@@ -798,7 +802,6 @@ function handleDownloadRpt(e) {
         </tr>`;
     });
 
-    // IPTV/OTT subscribers को भी बिल में ऐड करो
     let trackerMap = {};
     (op.subscribers || []).forEach(s => {
         if (!trackerMap[s.platform]) trackerMap[s.platform] = { count: 0, revenue: 0 };
@@ -875,6 +878,7 @@ function handleDownloadRpt(e) {
         </div>
     </div>`, `Premium_Invoice_${op.name.replace(/\s+/g, '_')}.pdf`, qrHtml, op.name);
 }
+
 // PWA Install Logic
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
