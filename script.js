@@ -674,6 +674,7 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
 
     const tempContainer = document.createElement('div');
     tempContainer.innerHTML = `<div style="padding: 2rem; background: #ffffff; color: #1e293b; font-family: 'Inter', sans-serif; box-sizing: border-box;">
+        <!-- Header Section - Page 1 -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1.5rem;">
             <div style="text-align: left;">
                 <img src="${logoSrc}" style="max-height: 50px; display: block;" onerror="this.style.display='none'">
@@ -686,15 +687,23 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
             </div>
         </div>
         
+        <!-- Main Content - Page 1 -->
         ${htmlContent}
         
-        ${qrHtml}
-        
-        <div style="margin-top: 2rem; text-align: right; border-top: 2px dashed #e2e8f0; padding-top: 1.5rem;">
-            <div style="display: inline-block; text-align: center;">
-                <img src="${sealSrc}" style="height: 100px; width: auto; display: block; margin: 0 auto;" onerror="this.style.display='none'" alt="Seal">
-                <div style="border-top: 1px solid #cbd5e1; padding-top: 10px; width: 200px;">
-                    <p style="margin: 0; font-weight: 700; font-size: 14px;">Authorized Signatory</p>
+        <!-- Page 2 - QR Code and Stamp -->
+        <div style="page-break-before: always; margin-top: 2rem; padding-top: 2rem;">
+            <div style="border-top: 2px dashed #e2e8f0; padding-top: 2rem; text-align: center;">
+                <h3 style="margin-bottom: 2rem; color: #0f172a; font-size: 18px;">Payment & Authentication</h3>
+                ${qrHtml}
+                
+                <div style="margin-top: 4rem; text-align: center;">
+                    <div style="display: inline-block; text-align: center;">
+                        <img src="${sealSrc}" style="height: 120px; width: auto; display: block; margin: 0 auto 1rem;" onerror="this.style.display='none'" alt="Seal">
+                        <div style="border-top: 2px solid #cbd5e1; padding-top: 1rem; width: 250px; margin: 0 auto;">
+                            <p style="margin: 0; font-weight: 700; font-size: 16px;">Authorized Signatory</p>
+                            <p style="margin: 5px 0 0; font-size: 13px; color: #64748b;">Hybrid Internet Management</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -705,6 +714,7 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
         filename, 
         image: { type: 'jpeg', quality: 0.98 }, 
         html2canvas: { scale: 2, useCORS: true }, 
+        pagebreak: { mode: ['css', 'legacy'] },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } 
     };
 
@@ -728,21 +738,6 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
     }
 }
 
-function handleDownloadBal() {
-    const op = operators.find(o => o.id === (activeUser.role === 'admin' ? currentAdminViewOpId : activeUser.id));
-    if (!op) return;
-    const m = calculateOperatorMetrics(op);
-    triggerPrint(`
-        <div style="text-align:center; padding: 2rem 0;">
-            <h2 style="font-size:24px; color:#0f172a;">Balance Statement</h2>
-            <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 16px; padding: 2rem; margin: 2rem auto; max-width: 400px;">
-                <h1 style="color:#9f1239; font-size: 3rem;">${formatCurrency(m.outstanding)}</h1>
-                <p>Outstanding Amount</p>
-            </div>
-        </div>
-    `, `Balance_${op.name.replace(/\s+/g, '_')}.pdf`, '', op.name);
-}
-
 function handleDownloadRpt(e) {
     if (e) {
         e.preventDefault();
@@ -760,10 +755,10 @@ function handleDownloadRpt(e) {
     let qrHtml = '';
     if (upiId && upiId.trim() !== '' && m.outstanding > 0) {
         const upiLink = `upi://pay?pa=${encodeURIComponent(upiId.trim())}&pn=Hybrid%20Internet&am=${m.outstanding.toFixed(2)}&cu=INR`;
-        qrHtml = `<div style="text-align: center; margin: 2rem 0; padding: 1rem; background: #f8fafc; border-radius: 12px;">
-            <p style="font-weight: 600; margin-bottom: 1rem;">📱 Scan to Pay</p>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiLink)}" style="width: 180px; height: 180px; border: 2px solid #e2e8f0; border-radius: 12px;">
-            <p style="margin-top: 0.5rem; font-size: 12px;">UPI: ${upiId}<br>Amount: ${formatCurrency(m.outstanding)}</p>
+        qrHtml = `<div style="text-align: center; margin: 2rem 0; padding: 2rem; background: #f8fafc; border-radius: 12px;">
+            <p style="font-weight: 600; font-size: 16px; margin-bottom: 1.5rem;">📱 Scan to Pay</p>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiLink)}" style="width: 200px; height: 200px; border: 2px solid #e2e8f0; border-radius: 12px;">
+            <p style="margin-top: 1rem; font-size: 14px;">UPI ID: <strong>${upiId}</strong><br>Amount: <strong>${formatCurrency(m.outstanding)}</strong></p>
         </div>`;
     }
 
@@ -771,63 +766,98 @@ function handleDownloadRpt(e) {
     let gstRow = '';
     if (applyGst) {
         gstAmount = m.baseRevenue * 0.18;
-        gstRow = `<tr><td colspan="3" style="text-align:right; padding:8px;"><strong>+ GST (18%):</strong></td><td style="text-align:center;"><strong>${formatCurrency(gstAmount)}</strong></td></tr>`;
+        gstRow = `<tr><td colspan="3" style="text-align:right; padding:12px; border:1px solid #e2e8f0;"><strong>+ GST (18%):</strong></td><td style="text-align:center; padding:12px; border:1px solid #e2e8f0;"><strong>${formatCurrency(gstAmount)}</strong></td></tr>`;
     }
 
-    let tableRows = '';
+    // Package Summary (एक row में total users के साथ)
+    let packageSummary = '';
+    const packageGroups = {};
+    
     (op.plans || []).filter(p => !p.type.includes('GST') && p.users > 0).forEach(p => {
-        tableRows += `<tr>
-            <td style="padding:8px; border:1px solid #ddd;">${p.category}</td>
-            <td style="padding:8px; border:1px solid #ddd;">${p.type}</td>
-            <td style="padding:8px; border:1px solid #ddd; text-align:center;">${p.users} × ${formatCurrency(p.rate)}</td>
-            <td style="padding:8px; border:1px solid #ddd; text-align:center;">${formatCurrency(p.users * p.rate)}</td>
-        </tr>`;
+        if (!packageGroups[p.category]) {
+            packageGroups[p.category] = { totalUsers: 0, totalAmount: 0, details: [] };
+        }
+        packageGroups[p.category].totalUsers += p.users;
+        packageGroups[p.category].totalAmount += p.users * p.rate;
+        packageGroups[p.category].details.push(`${p.type}: ${p.users} users`);
     });
 
+    // Add IPTV/OTT subscribers
     (op.subscribers || []).forEach(s => {
-        tableRows += `<tr style="background:#f0f9ff;">
-            <td style="padding:8px; border:1px solid #ddd;">${s.platform}</td>
-            <td style="padding:8px; border:1px solid #ddd;">${s.name} (${s.bundle})</td>
-            <td style="padding:8px; border:1px solid #ddd; text-align:center;">1 × ${formatCurrency(s.rate)}</td>
-            <td style="padding:8px; border:1px solid #ddd; text-align:center;">${formatCurrency(s.rate)}</td>
-        </tr>`;
+        if (!packageGroups[s.platform]) {
+            packageGroups[s.platform] = { totalUsers: 0, totalAmount: 0, details: [] };
+        }
+        packageGroups[s.platform].totalUsers += 1;
+        packageGroups[s.platform].totalAmount += s.rate;
+        packageGroups[s.platform].details.push(`${s.name} (${s.bundle})`);
     });
+
+    // Generate package summary rows
+    for (const [category, data] of Object.entries(packageGroups)) {
+        packageSummary += `<tr>
+            <td style="padding:12px; border:1px solid #e2e8f0;"><strong>${category}</strong></td>
+            <td style="padding:12px; border:1px solid #e2e8f0;">${data.details.join('<br>')}</td>
+            <td style="padding:12px; border:1px solid #e2e8f0; text-align:center;">${data.totalUsers} Users</td>
+            <td style="padding:12px; border:1px solid #e2e8f0; text-align:center;"><strong>${formatCurrency(data.totalAmount)}</strong></td>
+        </tr>`;
+    }
 
     const totalWithGst = m.baseRevenue + gstAmount;
     const outstanding = totalWithGst - m.totalPaid;
 
     triggerPrint(`
-        <h2 style="text-align:center; margin-bottom:1.5rem;">Tax Invoice</h2>
-        <div style="margin-bottom:1rem; padding:1rem; background:#f8fafc; border-radius:8px;">
-            <h3 style="margin:0;">${op.name}</h3>
-            <p style="margin:5px 0;">${op.phone || ''} | ${op.address || ''}</p>
+        <h2 style="text-align:center; margin-bottom:1.5rem;">TAX INVOICE</h2>
+        
+        <!-- Customer Details -->
+        <div style="margin-bottom:2rem; padding:1rem; background:#f8fafc; border-radius:8px;">
+            <h3 style="margin:0 0 0.5rem 0;">${op.name}</h3>
+            <p style="margin:0.25rem 0;">📞 ${op.phone || 'N/A'}</p>
+            <p style="margin:0.25rem 0;">📍 ${op.address || 'N/A'}</p>
+            <p style="margin:0.25rem 0;">🔌 Port: ${op.portDetails || 'Standard'}</p>
         </div>
         
+        <!-- Services Summary Table -->
         <table style="width:100%; border-collapse:collapse; margin:1.5rem 0;">
             <thead>
                 <tr style="background:#4f46e5; color:white;">
-                    <th style="padding:10px;">Category</th>
-                    <th style="padding:10px;">Description</th>
-                    <th style="padding:10px;">Details</th>
-                    <th style="padding:10px;">Amount</th>
+                    <th style="padding:12px; border:1px solid #4f46e5;">Category</th>
+                    <th style="padding:12px; border:1px solid #4f46e5;">Details</th>
+                    <th style="padding:12px; border:1px solid #4f46e5;">Total Users</th>
+                    <th style="padding:12px; border:1px solid #4f46e5;">Amount</th>
                 </tr>
             </thead>
             <tbody>
-                ${tableRows || '<tr><td colspan="4" style="text-align:center;">No items</td></tr>'}
-                <tr style="background:#f1f5f9;"><td colspan="3" style="text-align:right; padding:8px;">Subtotal:</td><td style="text-align:center;">${formatCurrency(m.baseRevenue)}</td></tr>
+                ${packageSummary || '<tr><td colspan="4" style="text-align:center; padding:12px;">No active services</td></tr>'}
+                <tr style="background:#f1f5f9;">
+                    <td colspan="3" style="text-align:right; padding:12px; border:1px solid #e2e8f0;"><strong>Subtotal:</strong></td>
+                    <td style="text-align:center; padding:12px; border:1px solid #e2e8f0;"><strong>${formatCurrency(m.baseRevenue)}</strong></td>
+                </tr>
                 ${gstRow}
-                <tr style="background:#e2e8f0;"><td colspan="3" style="text-align:right; padding:10px;"><strong>Total:</strong></td><td style="text-align:center;"><strong>${formatCurrency(totalWithGst)}</strong></td></tr>
+                <tr style="background:#e2e8f0;">
+                    <td colspan="3" style="text-align:right; padding:12px; border:1px solid #e2e8f0;"><strong>Total Amount:</strong></td>
+                    <td style="text-align:center; padding:12px; border:1px solid #e2e8f0;"><strong>${formatCurrency(totalWithGst)}</strong></td>
+                </tr>
             </tbody>
         </table>
         
-        <div style="background: ${outstanding > 0 ? '#fff1f2' : '#f0fdf4'}; border: 1px solid ${outstanding > 0 ? '#fecdd3' : '#bbf7d0'}; border-radius: 12px; padding: 1.5rem; display: flex; justify-content: space-between;">
-            <div><strong>Outstanding:</strong></div>
-            <div style="font-size:24px; font-weight:800; color:${outstanding > 0 ? '#be123c' : '#15803d'};">${formatCurrency(outstanding)}</div>
+        <!-- Payment Summary -->
+        <div style="margin-top:2rem; padding:1.5rem; background: ${outstanding > 0 ? '#fff1f2' : '#f0fdf4'}; border: 1px solid ${outstanding > 0 ? '#fecdd3' : '#bbf7d0'}; border-radius: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <p style="margin:0; font-size:14px;">Paid Amount:</p>
+                    <p style="margin:0; font-size:14px;">Outstanding:</p>
+                </div>
+                <div style="text-align:right;">
+                    <p style="margin:0; font-size:14px;"><strong>${formatCurrency(m.totalPaid)}</strong></p>
+                    <p style="margin:0; font-size:24px; font-weight:800; color:${outstanding > 0 ? '#be123c' : '#15803d'};">${formatCurrency(outstanding)}</p>
+                </div>
+            </div>
         </div>
+        
+        <!-- Terms -->
+        <p style="margin-top:2rem; font-size:11px; color:#64748b; text-align:center;">This is a computer generated invoice. Valid without signature.</p>
     `, `Invoice_${op.name.replace(/\s+/g, '_')}.pdf`, qrHtml, op.name);
-}
-
-// PWA Install Logic
+}// PWA Install Logic
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
