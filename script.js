@@ -126,6 +126,7 @@ function calculateOperatorMetrics(operator) {
     let totalUsers = realPlans.reduce((sum, p) => sum + parseInt(p.users || 0), 0);
     let baseRevenue = realPlans.reduce((sum, p) => sum + (parseInt(p.users || 0) * parseFloat(p.rate || 0)), 0);
 
+    // IPTV/OTT subscribers को भी रेवेन्यू में ऐड करो
     (operator.subscribers || []).forEach(sub => {
         totalUsers += 1;
         baseRevenue += parseFloat(sub.rate || 0);
@@ -673,6 +674,7 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
 
     const tempContainer = document.createElement('div');
     tempContainer.innerHTML = `<div style="padding: 3rem; background: #ffffff; color: #1e293b; font-family: 'Inter', sans-serif; box-sizing: border-box; position: relative;">
+        <!-- Header Section -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 1.5rem; margin-bottom: 2rem;">
             <div style="text-align: left;">
                 <img src="${logoSrc}" style="max-height: 55px; display: block;" onerror="this.style.display='none'">
@@ -690,17 +692,19 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
         <!-- Main Content -->
         ${htmlContent}
         
+        <!-- Separate Page for QR & Signature if present or always -->
         <div style="page-break-before: always; margin-top: 5rem; padding-top: 2rem;">
             <div style="border-top: 2px dashed #e2e8f0; padding-top: 2rem;">
                 <h3 style="margin-bottom: 2rem; color: #0f172a; font-size: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">Authentication & Digital Payment</h3>
                 ${qrHtml}
                 
+                <!-- Footer Signatory - बड़ा साइज़ किया गया -->
                 <div style="margin-top: 4rem; text-align: right; position: relative;">
                     <div style="display: inline-block; text-align: center;">
-                        <img src="${sealSrc}" style="height: 110px; mix-blend-mode: multiply; filter: contrast(1.2) grayscale(100%); display: block; margin: 0 auto; object-fit: contain; transform: translateY(20px);" onerror="this.style.display='none'" alt="Seal and Signature">
-                        <div style="border-top: 1px solid #cbd5e1; padding-top: 10px; width: 180px; margin-top: 10px;">
-                            <p style="margin: 0; font-weight: 700; font-size: 14px; color: #0f172a;">Authorized Signatory</p>
-                            <p style="margin: 0; font-size: 11px; color: #64748b;">Hybrid Internet Management</p>
+                        <img src="${sealSrc}" style="height: 140px; width: auto; mix-blend-mode: multiply; filter: contrast(1.2) grayscale(100%); display: block; margin: 0 auto; object-fit: contain; transform: translateY(20px);" onerror="this.style.display='none'" alt="Seal and Signature">
+                        <div style="border-top: 2px solid #cbd5e1; padding-top: 15px; width: 220px; margin-top: 15px;">
+                            <p style="margin: 0; font-weight: 700; font-size: 16px; color: #0f172a;">Authorized Signatory</p>
+                            <p style="margin: 5px 0 0; font-size: 13px; color: #64748b;">Hybrid Internet Management</p>
                         </div>
                     </div>
                 </div>
@@ -768,14 +772,16 @@ function handleDownloadRpt(e) {
     const reportGstChecked = e ? document.getElementById('report-gst').checked : op.applyGst;
 
     let qrHtml = '';
+    // QR Code - अब सही से आएगा amount के साथ
     if (upiId && m.outstanding > 0) {
-        const upiLink = `upi://pay?pa=${upiId}&pn=Hybrid+Internet&am=${m.outstanding.toFixed(2)}&cu=INR`;
+        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=Hybrid%20Internet&am=${m.outstanding.toFixed(2)}&cu=INR`;
         qrHtml = `<div style="text-align: center; margin-top: 2rem; border-top: 1px dashed #cbd5e1; padding-top: 2rem;">
-            <p style="font-weight: 600; font-size: 14px; margin-bottom: 10px;">Scan to Pay instantly via Any UPI App</p>
-            <div style="border: 2px solid #e2e8f0; padding: 10px; display: inline-block; border-radius: 12px; background: white;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(upiLink)}" alt="UPI QR" style="display: block;">
+            <p style="font-weight: 600; font-size: 16px; margin-bottom: 15px;">Scan to Pay instantly via Any UPI App</p>
+            <div style="border: 2px solid #e2e8f0; padding: 15px; display: inline-block; border-radius: 12px; background: white;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiLink)}" alt="UPI QR" style="display: block; width: 180px; height: 180px;">
             </div>
-            <p style="font-size: 12px; color: #64748b; margin-top: 8px;">UPI ID: <strong>${upiId}</strong></p>
+            <p style="font-size: 14px; color: #64748b; margin-top: 12px;">UPI ID: <strong>${upiId}</strong></p>
+            <p style="font-size: 18px; color: #0f172a; font-weight: 700; margin-top: 8px;">Amount: ${formatCurrency(m.outstanding)}</p>
         </div>`;
     }
 
@@ -792,7 +798,8 @@ function handleDownloadRpt(e) {
     const currentOutstanding = finalExpected - m.totalPaid;
 
     let subTableLines = '';
-    const displayPlans = (op.plans || []).filter(p => !p.type.includes('18% GST'));
+    // Plans से लाइनें
+    const displayPlans = (op.plans || []).filter(p => !p.type.includes('18% GST') && parseInt(p.users || 0) > 0);
     displayPlans.forEach(p => {
         subTableLines += `<tr>
             <td style="text-align:left; border:1px solid #e2e8f0; padding:12px;">${p.category}</td>
@@ -802,6 +809,7 @@ function handleDownloadRpt(e) {
         </tr>`;
     });
 
+    // IPTV/OTT subscribers को भी बिल में ऐड करो
     let trackerMap = {};
     (op.subscribers || []).forEach(s => {
         if (!trackerMap[s.platform]) trackerMap[s.platform] = { count: 0, revenue: 0 };
