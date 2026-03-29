@@ -85,11 +85,11 @@ function switchView(viewName) {
     }
 }
 
-function openModal(modalId) { 
-    document.getElementById(modalId).classList.add('active'); 
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
 }
-function closeModal(modalId) { 
-    document.getElementById(modalId).classList.remove('active'); 
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
 }
 
 // Close modal handlers
@@ -349,7 +349,7 @@ function renderAdminDashboard(searchTerm = '') {
     const filtered = operators.filter(op => op.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     if (filtered.length === 0) {
-        opList.innerHTML = `<div style="grid-column: 1 / -1" class="empty-state"><i class="fa-solid fa-box-open"></i><p>No operators found.</p></div>`;
+        opList.innerHTML = `<div style = "grid-column: 1 / -1" class="empty-state"><i class="fa-solid fa-box-open"></i><p>No operators found.</p></div> `;
         return;
     }
 
@@ -360,10 +360,10 @@ function renderAdminDashboard(searchTerm = '') {
             let expCount = op.subscribers.filter(s => getExpiryStatus(s.expiryDate).days <= 2 && getExpiryStatus(s.expiryDate).days >= 0).length;
             let alreadyExpCount = op.subscribers.filter(s => getExpiryStatus(s.expiryDate).days < 0).length;
             if (expCount > 0 || alreadyExpCount > 0) {
-                expireWarn = `<div style="margin-top: 10px; font-size: 0.8rem; display: flex; gap: 0.5rem;">`;
-                if (expCount > 0) expireWarn += `<span class="status-badge" style="background:#fef3c7; color:#b45309;">${expCount} Expiring Soon</span>`;
-                if (alreadyExpCount > 0) expireWarn += `<span class="status-badge" style="background:#fee2e2; color:#b91c1c;">${alreadyExpCount} Expired</span>`;
-                expireWarn += `</div>`;
+                expireWarn = `<div style = "margin-top: 10px; font-size: 0.8rem; display: flex; gap: 0.5rem;"> `;
+                if (expCount > 0) expireWarn += `<span class="status-badge" style = "background:#fef3c7; color:#b45309;"> ${expCount} Expiring Soon</span> `;
+                if (alreadyExpCount > 0) expireWarn += `<span class="status-badge" style = "background:#fee2e2; color:#b91c1c;"> ${alreadyExpCount} Expired</span> `;
+                expireWarn += `</div> `;
             }
         }
 
@@ -371,7 +371,7 @@ function renderAdminDashboard(searchTerm = '') {
         card.className = 'operator-card';
         card.onclick = () => { currentAdminViewOpId = op.id; renderApp(); };
         card.innerHTML = `
-            <div class="operator-header">
+        <div class="operator-header">
                 <div class="operator-info">
                     <h3>${op.name}</h3>
                     <p>Added: ${formatDate(op.createdAt)}</p>
@@ -379,14 +379,14 @@ function renderAdminDashboard(searchTerm = '') {
                 </div>
                 <div class="operator-icon"><i class="fa-solid fa-plug-circle-bolt"></i></div>
             </div>
-            ${expireWarn}
-            <div class="operator-stats">
-                <div class="op-stat-item"><span>Total Users</span><strong>${m.totalUsers}</strong></div>
-                <div class="op-stat-item"><span>Status</span><span class="status-badge ${m.outstanding <= 0 ? 'badge-paid' : 'badge-unpaid'}">${m.outstanding <= 0 && m.expectedRevenue > 0 ? 'Clear' : 'Pending'}</span></div>
-                <div class="op-stat-item"><span>Paid</span><strong class="text-success">${formatCurrency(m.totalPaid)}</strong></div>
-                <div class="op-stat-item"><span>Due</span><strong class="${m.outstanding > 0 ? 'text-warning' : 'text-success'}">${formatCurrency(m.outstanding)}</strong></div>
-            </div>
-        `;
+        ${expireWarn}
+    <div class="operator-stats">
+        <div class="op-stat-item"><span>Total Users</span><strong>${m.totalUsers}</strong></div>
+        <div class="op-stat-item"><span>Status</span><span class="status-badge ${m.outstanding <= 0 ? 'badge-paid' : 'badge-unpaid'}">${m.outstanding <= 0 && m.expectedRevenue > 0 ? 'Clear' : 'Pending'}</span></div>
+        <div class="op-stat-item"><span>Paid</span><strong class="text-success">${formatCurrency(m.totalPaid)}</strong></div>
+        <div class="op-stat-item"><span>Due</span><strong class="${m.outstanding > 0 ? 'text-warning' : 'text-success'}">${formatCurrency(m.outstanding)}</strong></div>
+    </div>
+    `;
         opList.appendChild(card);
     });
 }
@@ -428,6 +428,7 @@ function renderOperatorPortal(op) {
     document.getElementById('op-profile-name').textContent = op.name;
     document.getElementById('op-profile-phone').textContent = op.phone || 'N/A';
     document.getElementById('op-profile-port').textContent = op.portDetails || 'Standard Port';
+    document.getElementById('op-profile-vlan').textContent = op.vlanDetails || 'N/A';
     document.getElementById('op-profile-address').textContent = op.address || 'N/A';
 
     let iptvCount = 0; let ottCount = 0;
@@ -498,13 +499,13 @@ function renderOperatorPortal(op) {
 function renderPlansTable(tbodyId, operator, metrics, isAdmin) {
     const tbody = document.getElementById(tbodyId);
     tbody.innerHTML = '';
-    
+
     const displayPlans = (operator.plans || [])
         .filter(p => !p.type.includes('18% GST') && !p.type.includes('GST 18%'))
         .filter(p => parseInt(p.users || 0) > 0);
 
     if (displayPlans.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" class="empty-state">No active packages with users.</td></tr>`;
+        tbody.innerHTML = `<tr> <td colspan="${isAdmin ? 6 : 5}" class="empty-state">No active packages with users.</td></tr> `;
         return;
     }
 
@@ -516,7 +517,7 @@ function renderPlansTable(tbodyId, operator, metrics, isAdmin) {
                 <td>${p.users}</td>
                 <td>${formatCurrency(p.rate)}</td>
                 <td><strong>${formatCurrency(p.users * p.rate)}</strong></td>
-            </tr>`;
+            </tr> `;
         } else {
             tbody.innerHTML += `<tr>
                 <td><span class="status-badge" style="background:#f1f5f9; color:#475569;">${p.category || 'Internet'}</span></td>
@@ -528,13 +529,13 @@ function renderPlansTable(tbodyId, operator, metrics, isAdmin) {
                     <button class="btn-icon" onclick="editPlan('${p.id}')"><i class="fa-solid fa-pen text-primary"></i></button>
                     <button class="btn-icon" onclick="deletePlan('${p.id}')"><i class="fa-solid fa-trash text-danger"></i></button>
                 </td>
-            </tr>`;
+            </tr> `;
         }
     });
 
     if (operator.applyGst && metrics.baseRevenue > 0 && isAdmin) {
         tbody.innerHTML += `
-            <tr style="background-color: var(--surface-hover);"><td colspan="4" style="text-align: right; font-weight: 600; color: var(--text-muted);">Base Subtotal:</td><td colspan="2"><strong>${formatCurrency(metrics.baseRevenue)}</strong></td></tr>
+        <tr style = "background-color: var(--surface-hover);"><td colspan="4" style="text-align: right; font-weight: 600; color: var(--text-muted);">Base Subtotal:</td><td colspan="2"><strong>${formatCurrency(metrics.baseRevenue)}</strong></td></tr>
             <tr style="background-color: #eff6ff;"><td colspan="4" style="text-align: right; font-weight: 600; color: var(--primary-color);">+ 18% GST Appended:</td><td colspan="2"><strong style="color: var(--primary-color);">${formatCurrency(metrics.gstAmount)}</strong></td></tr>
             <tr><td colspan="4" style="text-align: right; font-weight: 700; color: var(--text-main);">Grand Total Expected:</td><td colspan="2"><strong>${formatCurrency(metrics.expectedRevenue)}</strong></td></tr>`;
     }
@@ -546,7 +547,7 @@ function renderPaymentsTable(tbodyId, operator, isAdmin) {
     const sorted = (operator.payments || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
 
     if (sorted.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 4}" class="empty-state">No payment history.</td></tr>`;
+        tbody.innerHTML = `<tr> <td colspan="${isAdmin ? 5 : 4}" class="empty-state">No payment history.</td></tr> `;
         return;
     }
 
@@ -559,7 +560,7 @@ function renderPaymentsTable(tbodyId, operator, isAdmin) {
                 <td>${p.type}</td>
                 <td><strong>${formatCurrency(p.amount)}</strong></td>
                 <td><span class="status-badge ${statStyle}">${p.status}</span></td>
-            </tr>`;
+            </tr> `;
         } else {
             tbody.innerHTML += `<tr>
                 <td>${formatDate(p.date)}</td>
@@ -567,11 +568,10 @@ function renderPaymentsTable(tbodyId, operator, isAdmin) {
                 <td><strong>${formatCurrency(p.amount)}</strong></td>
                 <td><span class="status-badge ${statStyle}" style="cursor:pointer;" onclick="togglePaymentStatus('${p.id}')">${p.status} <i class="fa-solid fa-rotate"></i></span></td>
                 <td><button class="btn-icon" onclick="deletePayment('${p.id}')"><i class="fa-solid fa-trash text-danger"></i></button></td>
-            </tr>`;
+            </tr> `;
         }
     });
 }
-
 function renderSubscribersTable(tbodyId, operator, isAdmin, platformType) {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
@@ -579,7 +579,7 @@ function renderSubscribersTable(tbodyId, operator, isAdmin, platformType) {
     const subs = (operator.subscribers || []).filter(s => s.platform === platformType).slice().sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
 
     if (subs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" class="empty-state">No individual users tracked yet.</td></tr>`;
+        tbody.innerHTML = `<tr> <td colspan="${isAdmin ? 6 : 5}" class="empty-state">No individual users tracked yet.</td></tr> `;
         return;
     }
 
@@ -591,13 +591,13 @@ function renderSubscribersTable(tbodyId, operator, isAdmin, platformType) {
 
         if (isAdmin) {
             tr.innerHTML = `
-                <td><strong>${sub.name}</strong></td>
+        <td> <strong>${sub.name}</strong></td>
                 <td><span style="font-size: 11px; padding: 2px 6px; background: #e2e8f0; border-radius: 4px; border: 1px solid #cbd5e1;">${sub.platform}</span><br><span style="margin-top:4px; display:inline-block;">${sub.bundle}</span></td>
                 <td><div style="font-size: 0.8rem; color: var(--text-muted);">Start: ${formatDate(sub.createdDate)}</div><div style="font-weight: 600; color: ${expStatus.days <= 2 ? 'var(--danger-color)' : 'var(--text-main)'};">Exp: ${formatDate(sub.expiryDate)}</div></td>
                 <td><span class="status-badge" style="background: var(--${expStatus.color}-color); color: white;">${expStatus.label}</span></td>
                 <td>
                     <div style="display:flex; gap:0.5rem;">
-                        <button class="btn btn-sm btn-outline" style="color:#25D366; border-color:#25D366; background:white;" onclick="sendReminder('${operator.id}','${sub.id}','whatsapp')"><i class="fa-brands fa-whatsapp"></i> WA</button>
+                        <button class="btn btn-sm btn-outline" style="color:#25D366; border-color:#25D366; background:white;" onclick="sendReminder('${operator.id}','${sub.id}','whatsapp')"><i class="brands fa-whatsapp"></i> WA</button>
                         <button class="btn btn-sm btn-outline" onclick="sendReminder('${operator.id}','${sub.id}','sms')"><i class="fa-solid fa-comment-sms"></i> SMS</button>
                     </div>
                 </td>
@@ -605,15 +605,15 @@ function renderSubscribersTable(tbodyId, operator, isAdmin, platformType) {
                     <button class="btn-icon" onclick="editSubscriber('${sub.id}')"><i class="fa-solid fa-pen text-primary"></i></button>
                     <button class="btn-icon" onclick="deleteSubscriber('${sub.id}')"><i class="fa-solid fa-trash text-danger"></i></button>
                 </td>
-            `;
+    `;
         } else {
             tr.innerHTML = `
-                <td><strong>${sub.name}</strong></td>
+        <td> <strong>${sub.name}</strong></td>
                 <td><span style="font-size: 11px; padding: 2px 6px; background: #e2e8f0; border-radius: 4px; border: 1px solid #cbd5e1;">${sub.platform}</span><br><span style="margin-top:4px; display:inline-block;">${sub.bundle}</span></td>
                 <td><div style="font-size: 0.8rem; color: var(--text-muted);">Start: ${formatDate(sub.createdDate)}</div><div style="font-weight: 600; color: ${expStatus.days <= 2 ? 'var(--danger-color)' : 'var(--text-main)'};">Exp: ${formatDate(sub.expiryDate)}</div></td>
                 <td><span class="status-badge" style="background: var(--${expStatus.color}-color); color: white;">${expStatus.label}</span></td>
                 <td><span style="font-size:0.75rem; color:#94a3b8;">Read Only</span></td>
-            `;
+    `;
         }
         tbody.appendChild(tr);
     });
@@ -631,10 +631,10 @@ function openChartDetails(targetOps) {
             let exp = getExpiryStatus(s.expiryDate);
             if (s.platform === 'IPTV') {
                 iptvCount++;
-                if (exp.days <= 7 && exp.days >= 0) iptvExpArr.push(`<tr><td style="padding:0; font-size:12px;"><strong>${s.name}</strong> <span style="color:#64748b; font-size:10px;">(${op.name})</span></td><td style="padding:0; text-align:right; font-size:12px; color:#dc2626;">${exp.days} days</td></tr>`);
+                if (exp.days <= 7 && exp.days >= 0) iptvExpArr.push(`<tr><td style="padding:0; font-size:12px;"><strong>${s.name}</strong> <span style="color:#64748b; font-size:10px;">(${op.name})</span></td><td style="padding:0; text-align:right; font-size:12px; color:#dc2626;">${exp.days} days</td></tr> `);
             } else if (s.platform === 'OTT') {
                 ottCount++;
-                if (exp.days <= 7 && exp.days >= 0) ottExpArr.push(`<tr><td style="padding:0; font-size:12px;"><strong>${s.name}</strong> <span style="color:#64748b; font-size:10px;">(${op.name})</span></td><td style="padding:0; text-align:right; font-size:12px; color:#dc2626;">${exp.days} days</td></tr>`);
+                if (exp.days <= 7 && exp.days >= 0) ottExpArr.push(`<tr><td style="padding:0; font-size:12px;"><strong>${s.name}</strong> <span style="color:#64748b; font-size:10px;">(${op.name})</span></td><td style="padding:0; text-align:right; font-size:12px; color:#dc2626;">${exp.days} days</td></tr> `);
             }
         });
     });
@@ -644,11 +644,11 @@ function openChartDetails(targetOps) {
     document.getElementById('cd-ott-users').textContent = ottCount;
 
     document.getElementById('cd-iptv-exp').innerHTML = iptvExpArr.length > 0
-        ? `<table style="width:100%; border-collapse: collapse;">${iptvExpArr.join('')}</table>`
+        ? `<table style = "width:100%; border-collapse: collapse;"> ${iptvExpArr.join('')}</table> `
         : '<span style="color:#64748b; font-size:11px;">None</span>';
 
     document.getElementById('cd-ott-exp').innerHTML = ottExpArr.length > 0
-        ? `<table style="width:100%; border-collapse: collapse;">${ottExpArr.join('')}</table>`
+        ? `<table style = "width:100%; border-collapse: collapse;"> ${ottExpArr.join('')}</table> `
         : '<span style="color:#64748b; font-size:11px;">None</span>';
 
     openModal('chart-details-modal');
@@ -665,21 +665,24 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
 
     isGeneratingPDF = true;
 
-    const logoSrc = localStorage.getItem('jarvis_hybrid_logo') || 'logo.png';
-    const sealSrc = localStorage.getItem('jarvis_hybrid_seal') || 'seal.png';
+    const emptyB64 = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    const logoSrc = localStorage.getItem('jarvis_hybrid_logo') || emptyB64;
+    const sealSrc = localStorage.getItem('jarvis_hybrid_seal') || emptyB64;
     const gstNo = localStorage.getItem(GST_KEY) || 'Not Provided';
 
-    const opNameBlock = opName ? `<p style="font-size: 11px; color: #64748b; margin: 0; text-transform: uppercase;">Portal Billed To</p>
-                        <p style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 0 0 5px 0; text-transform: uppercase;">${opName}</p>` : `<p style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0; text-transform: uppercase;">INVOICE / RECEIPT</p>`;
+    const opNameBlock = opName ? `<p style="font-size: 10px; color: #64748b; margin: 0; text-transform: uppercase;">Portal Billed To</p>
+        <p style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 5px 0; text-transform: uppercase;">${opName}</p>` : `<p style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; text-transform: uppercase;">INVOICE / RECEIPT</p>`;
 
     const tempContainer = document.createElement('div');
     tempContainer.innerHTML = `<div style="padding: 2rem; background: #ffffff; color: #1e293b; font-family: 'Inter', sans-serif; box-sizing: border-box;">
-        <!-- Header Section - Page 1 -->
+        <!-- Header Section -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1.5rem;">
-            <div style="text-align: left;">
-                <img src="${logoSrc}" style="max-height: 50px; display: block;" onerror="this.style.display='none'">
-                <h1 style="margin: 0.5rem 0 0 0; font-size: 20px; font-weight: 800; color: #0f172a;">HYBRID INTERNET</h1>
-                <p style="margin: 2px 0; font-size: 11px; color: #64748b;">GSTIN: <strong>${gstNo}</strong></p>
+            <div style="text-align: left; display: flex; align-items: center; gap: 1rem;">
+                <img src="${logoSrc}" style="max-height: 50px; object-fit: contain; display: block;" onerror="this.style.display='none'">
+                <div>
+                    <h1 style="margin: 0; font-size: 24px; font-weight: 900; color: #0f172a; text-transform: uppercase;">HYBRID INTERNET</h1>
+                    <p style="margin: 2px 0 0 0; font-size: 12px; color: #334155;">GSTIN: <strong>${gstNo || 'Not Provided'}</strong></p>
+                </div>
             </div>
             <div style="text-align: right;">
                 ${opNameBlock}
@@ -687,35 +690,31 @@ function triggerPrint(htmlContent, filename, qrHtml = '', opName = '') {
             </div>
         </div>
         
-        <!-- Main Content - Page 1 -->
+        <!-- Main Content -->
         ${htmlContent}
         
-        <!-- Page 2 - QR Code and Stamp -->
-        <div style="page-break-before: always; margin-top: 2rem; padding-top: 2rem;">
-            <div style="border-top: 2px dashed #e2e8f0; padding-top: 2rem; text-align: center;">
-                <h3 style="margin-bottom: 2rem; color: #0f172a; font-size: 18px;">Payment & Authentication</h3>
+        <!-- QR Code and Stamp Side-by-Side -->
+        <div style="page-break-inside: avoid; margin-top: 2rem; border-top: 2px dashed #cbd5e1; padding-top: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
+            <div style="text-align: left; max-width: 50%;">
                 ${qrHtml}
-                
-                <div style="margin-top: 4rem; text-align: center;">
-                    <div style="display: inline-block; text-align: center;">
-                        <img src="${sealSrc}" style="height: 120px; width: auto; display: block; margin: 0 auto 1rem;" onerror="this.style.display='none'" alt="Seal">
-                        <div style="border-top: 2px solid #cbd5e1; padding-top: 1rem; width: 250px; margin: 0 auto;">
-                            <p style="margin: 0; font-weight: 700; font-size: 16px;">Authorized Signatory</p>
-                            <p style="margin: 5px 0 0; font-size: 13px; color: #64748b;">Hybrid Internet Management</p>
-                        </div>
-                    </div>
+            </div>
+            <div style="text-align: center;">
+                <img src="${sealSrc}" style="height: 100px; width: auto; display: block; margin: 0 auto 0.5rem;" onerror="this.style.display='none'" alt="Seal">
+                <div style="border-top: 2px solid #0f172a; padding-top: 0.5rem; min-width: 220px;">
+                    <p style="margin: 0; font-weight: 800; font-size: 15px; color: #0f172a;">Authorized Signatory</p>
+                    <p style="margin: 4px 0 0; font-size: 12px; color: #64748b;">Hybrid Internet Management</p>
                 </div>
             </div>
         </div>
     </div>`;
 
-    const opt = { 
-        margin: [0.5, 0.5, 0.5, 0.5], 
-        filename, 
-        image: { type: 'jpeg', quality: 0.98 }, 
-        html2canvas: { scale: 2, useCORS: true }, 
+    const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
         pagebreak: { mode: ['css', 'legacy'] },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } 
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
 
     if (window.html2pdf) {
@@ -743,10 +742,10 @@ function handleDownloadRpt(e) {
         e.preventDefault();
         closeModal('report-modal');
     }
-    
+
     const op = operators.find(o => o.id === (activeUser.role === 'admin' ? currentAdminViewOpId : activeUser.id));
     if (!op) return;
-    
+
     const m = calculateOperatorMetrics(op);
     const upiId = localStorage.getItem(UPI_KEY);
     const gstNo = localStorage.getItem(GST_KEY);
@@ -755,10 +754,15 @@ function handleDownloadRpt(e) {
     let qrHtml = '';
     if (upiId && upiId.trim() !== '' && m.outstanding > 0) {
         const upiLink = `upi://pay?pa=${encodeURIComponent(upiId.trim())}&pn=Hybrid%20Internet&am=${m.outstanding.toFixed(2)}&cu=INR`;
-        qrHtml = `<div style="text-align: center; margin: 2rem 0; padding: 2rem; background: #f8fafc; border-radius: 12px;">
-            <p style="font-weight: 600; font-size: 16px; margin-bottom: 1.5rem;">📱 Scan to Pay</p>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiLink)}" style="width: 200px; height: 200px; border: 2px solid #e2e8f0; border-radius: 12px;">
-            <p style="margin-top: 1rem; font-size: 14px;">UPI ID: <strong>${upiId}</strong><br>Amount: <strong>${formatCurrency(m.outstanding)}</strong></p>
+        qrHtml = `<div style="text-align: left; padding: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <p style="font-weight: 700; font-size: 13px; margin: 0 0 0.5rem 0; color: #0f172a;">📱 Scan to Pay</p>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(upiLink)}" style="width: 100px; height: 100px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <div>
+                    <p style="margin: 0; font-size: 12px; color: #475569;">UPI ID:<br><strong style="color: #0f172a;">${upiId}</strong></p>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 12px; color: #475569;">Amount:<br><strong style="font-size: 14px; color: #0f172a;">${formatCurrency(m.outstanding)}</strong></p>
+                </div>
+            </div>
         </div>`;
     }
 
@@ -769,10 +773,10 @@ function handleDownloadRpt(e) {
         gstRow = `<tr><td colspan="3" style="text-align:right; padding:12px; border:1px solid #e2e8f0;"><strong>+ GST (18%):</strong></td><td style="text-align:center; padding:12px; border:1px solid #e2e8f0;"><strong>${formatCurrency(gstAmount)}</strong></td></tr>`;
     }
 
-    // Package Summary (एक row में total users के साथ)
+    // Package Summary
     let packageSummary = '';
     const packageGroups = {};
-    
+
     (op.plans || []).filter(p => !p.type.includes('GST') && p.users > 0).forEach(p => {
         if (!packageGroups[p.category]) {
             packageGroups[p.category] = { totalUsers: 0, totalAmount: 0, details: [] };
@@ -857,7 +861,9 @@ function handleDownloadRpt(e) {
         <!-- Terms -->
         <p style="margin-top:2rem; font-size:11px; color:#64748b; text-align:center;">This is a computer generated invoice. Valid without signature.</p>
     `, `Invoice_${op.name.replace(/\s+/g, '_')}.pdf`, qrHtml, op.name);
-}// PWA Install Logic
+}
+
+// PWA Install Logic
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -1022,6 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
             password: document.getElementById('op-password').value.trim(),
             phone: document.getElementById('op-phone').value.trim(),
             portDetails: document.getElementById('op-port').value.trim(),
+            vlanDetails: document.getElementById('op-vlan').value.trim(),
             chatId: document.getElementById('op-chat-id').value.trim(),
             address: document.getElementById('op-address').value.trim()
         };
@@ -1036,13 +1043,13 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.assign(op, data);
             showToast('Operator updated');
         } else {
-            const newOp = { 
-                id: generateId(), 
-                ...data, 
-                createdAt: new Date().toISOString(), 
-                plans: [], 
-                payments: [], 
-                subscribers: [] 
+            const newOp = {
+                id: generateId(),
+                ...data,
+                createdAt: new Date().toISOString(),
+                plans: [],
+                payments: [],
+                subscribers: []
             };
             operators.push(newOp);
             showToast('Operator created');
@@ -1050,20 +1057,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const op = operators.find(o => o.id === (id || currentAdminViewOpId));
-        
+
         // Add IPTV packages
         document.querySelectorAll('.iptv-row').forEach(row => {
             const name = row.querySelector('.iptv-name-input')?.value.trim();
             const rate = row.querySelector('.iptv-rate-input')?.value;
             const desc = row.querySelector('.iptv-desc-input')?.value.trim();
             if (name && rate) {
-                op.plans.push({ 
-                    id: generateId(), 
-                    category: 'IPTV', 
-                    type: name, 
-                    rate: parseFloat(rate), 
-                    users: 0, 
-                    description: desc 
+                op.plans.push({
+                    id: generateId(),
+                    category: 'IPTV',
+                    type: name,
+                    rate: parseFloat(rate),
+                    users: 0,
+                    description: desc
                 });
             }
         });
@@ -1074,13 +1081,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const rate = row.querySelector('.ott-rate-input')?.value;
             const desc = row.querySelector('.ott-desc-input')?.value.trim();
             if (name && rate) {
-                op.plans.push({ 
-                    id: generateId(), 
-                    category: 'OTT', 
-                    type: name, 
-                    rate: parseFloat(rate), 
-                    users: 0, 
-                    description: desc 
+                op.plans.push({
+                    id: generateId(),
+                    category: 'OTT',
+                    type: name,
+                    rate: parseFloat(rate),
+                    users: 0,
+                    description: desc
                 });
             }
         });
@@ -1143,7 +1150,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const subId = document.getElementById('sub-id').value;
         const bundleOpt = document.getElementById('sub-bundle').selectedOptions[0];
-        
+
         if (!bundleOpt || !bundleOpt.value) {
             showToast('Select a package first', 'error');
             return;
@@ -1177,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const bundleSelect = document.getElementById('sub-bundle');
         bundleSelect.innerHTML = '';
-        
+
         const packs = (op.plans || []).filter(p => p.category === e.target.value);
         packs.forEach(p => {
             const opt = document.createElement('option');
@@ -1213,6 +1220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('op-password').value = op.password || '';
         document.getElementById('op-phone').value = op.phone || '';
         document.getElementById('op-port').value = op.portDetails || '';
+        document.getElementById('op-vlan').value = op.vlanDetails || '';
         document.getElementById('op-chat-id').value = op.chatId || '';
         document.getElementById('op-address').value = op.address || '';
 
@@ -1300,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Report button
     document.getElementById('report-btn')?.addEventListener('click', () => openModal('report-modal'));
-    document.getElementById('balance-receipt-btn')?.addEventListener('click', handleDownloadBal);
+    document.getElementById('balance-receipt-btn')?.addEventListener('click', () => handleDownloadRpt()); // mapped appropriately
 
     // No dues receipt
     document.getElementById('receipt-btn')?.addEventListener('click', () => {
@@ -1360,7 +1368,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('sub-form').reset();
         document.getElementById('sub-id').value = '';
         document.getElementById('sub-created').valueAsDate = new Date();
-        
+
         const op = operators.find(o => o.id === currentAdminViewOpId);
         if (op) {
             const event = new Event('change');
@@ -1389,7 +1397,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Helper functions
-    window.addIptvRow = function() {
+    window.addIptvRow = function () {
         document.getElementById('iptv-rows-container').insertAdjacentHTML('beforeend', `
             <div class="form-group iptv-row" style="padding:10px; background:#f0fdf4; border:1px dashed #10b981; margin-bottom:0.5rem;">
                 <label style="color:#10b981; display:flex; justify-content:space-between;">
@@ -1405,7 +1413,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `);
     };
 
-    window.addOttRow = function() {
+    window.addOttRow = function () {
         document.getElementById('ott-rows-container').insertAdjacentHTML('beforeend', `
             <div class="form-group ott-row" style="padding:10px; background:#fffbeb; border:1px dashed #f59e0b; margin-bottom:0.5rem;">
                 <label style="color:#f59e0b; display:flex; justify-content:space-between;">
@@ -1421,7 +1429,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `);
     };
 
-    window.editPlan = function(planId) {
+    window.editPlan = function (planId) {
         const op = operators.find(o => o.id === (activeUser.role === 'admin' ? currentAdminViewOpId : activeUser.id));
         if (!op) return;
         const plan = op.plans.find(p => p.id === planId);
@@ -1436,7 +1444,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.deletePlan = function(planId) {
+    window.deletePlan = function (planId) {
         if (confirm('Delete this plan?')) {
             const op = operators.find(o => o.id === (activeUser.role === 'admin' ? currentAdminViewOpId : activeUser.id));
             if (op) {
@@ -1447,7 +1455,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.deletePayment = function(paymentId) {
+    window.deletePayment = function (paymentId) {
         if (confirm('Delete this payment?')) {
             const op = operators.find(o => o.id === currentAdminViewOpId);
             if (op) {
@@ -1458,7 +1466,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.togglePaymentStatus = function(paymentId) {
+    window.togglePaymentStatus = function (paymentId) {
         const op = operators.find(o => o.id === currentAdminViewOpId);
         if (op) {
             const payment = op.payments.find(p => p.id === paymentId);
@@ -1469,7 +1477,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.editSubscriber = function(subId) {
+    window.editSubscriber = function (subId) {
         const op = operators.find(o => o.id === (activeUser.role === 'admin' ? currentAdminViewOpId : activeUser.id));
         if (!op) return;
         const sub = op.subscribers.find(s => s.id === subId);
@@ -1477,25 +1485,25 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('sub-id').value = sub.id;
             document.getElementById('sub-name').value = sub.name;
             document.getElementById('sub-platform').value = sub.platform;
-            
+
             // Trigger change to populate bundles
             const event = new Event('change');
             document.getElementById('sub-platform').dispatchEvent(event);
-            
+
             // Select correct bundle
             setTimeout(() => {
                 Array.from(document.getElementById('sub-bundle').options).forEach(opt => {
                     if (opt.dataset.type === sub.bundle) opt.selected = true;
                 });
             }, 100);
-            
+
             document.getElementById('sub-created').value = sub.createdDate;
             document.getElementById('sub-expiry').value = sub.expiryDate;
             openModal('sub-modal');
         }
     };
 
-    window.deleteSubscriber = function(subId) {
+    window.deleteSubscriber = function (subId) {
         if (confirm('Delete this user?')) {
             const op = operators.find(o => o.id === (activeUser.role === 'admin' ? currentAdminViewOpId : activeUser.id));
             if (op) {
@@ -1506,7 +1514,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.sendReminder = function(opId, subId, method) {
+    window.sendReminder = function (opId, subId, method) {
         const op = operators.find(o => o.id === opId);
         if (!op) return;
         const sub = op.subscribers?.find(s => s.id === subId);
@@ -1572,19 +1580,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             sent++;
                         }
                     } catch (err) {
-                        console.error('Telegram error:', err);
+                        console.error('Telegram auto-send error:', err);
                     }
                 }
             }
-
-            if (changed) {
-                op.lastAutoReminders = sentLog;
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(operators));
-            }
+            if (changed) op.lastAutoReminders = sentLog;
         }
 
-        if (sent > 0) {
-            showToast(`Sent ${sent} Telegram reminders`);
-        }
-    }, 300000); // 5 minutes
+        if (sent > 0) saveData();
+    }, 5 * 60 * 1000); // Check every 5 minutes
 });
