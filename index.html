@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Hybrid Internet Super Portal for Operators Management.">
+    <title>Hybrid Internet - Super Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <header class="app-header">
+        <div class="logo">
+            <!-- Loading global logo.png from repo root -->
+            <img src="logo.png" alt="Company Logo" class="logo-img" id="company-logo"
+                onerror="this.style.display='none'; document.getElementById('fallback-icon').style.display='block';">
+            <i class="fa-solid fa-wifi logo-icon" id="fallback-icon" style="display: none;"></i>
+            <h1>Hybrid Internet</h1>
+        </div>
+        <div class="header-right" id="header-actions" style="display: none; gap: 0.5rem; align-items: center;">
+            <span id="user-greeting"
+                style="margin-right: 0.5rem; font-weight: 600; font-size: 0.9rem; color: var(--primary-color);"></span>
+
+            <div id="admin-header-actions" style="display: flex; gap: 0.5rem;">
+                <button id="config-msg-btn" class="btn btn-outline btn-sm" title="Configure Message Templates">
+                    <i class="fa-solid fa-message"></i> MSG Setup
+                </button>
+                <button id="config-upi-btn" class="btn btn-outline btn-sm" title="Configure UPI Payment ID">
+                    <i class="fa-solid fa-qrcode"></i> Setup UPI
+                </button>
+            </div>
+
+            <button id="logout-btn" class="btn btn-outline btn-sm" title="Logout">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </button>
+        </div>
+    </header>
+
+    <main id="app-container">
+
+        <!-- Login View -->
+        <section id="login-view" class="view active">
+            <div class="login-card card"
+                style="position: relative; overflow: hidden; border: none; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1), 0 10px 20px -5px rgba(0,0,0,0.04); background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px);">
+                <div
+                    style="position: absolute; top: -50px; left: -50px; width: 100px; height: 100px; background: var(--primary-color); border-radius: 50%; opacity: 0.1; filter: blur(20px);">
+                </div>
+                <div
+                    style="position: absolute; bottom: -50px; right: -50px; width: 150px; height: 150px; background: var(--success-color); border-radius: 50%; opacity: 0.1; filter: blur(30px);">
+                </div>
+
+                <div style="text-align: center; margin-bottom: 2.5rem; position: relative; z-index: 1;">
+                    <div
+                        style="width: 70px; height: 70px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1)); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: var(--primary-color); font-size: 1.8rem; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);">
+                        <i class="fa-solid fa-fingerprint"></i>
+                    </div>
+                    <h2
+                        style="font-size: 1.8rem; font-weight: 700; background: linear-gradient(to right, var(--text-main), var(--primary-color)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+                        Operator Portal</h2>
+                    <p class="text-muted" style="margin-top: 8px; font-size: 0.95rem;">Secure authentication required
+                    </p>
+                </div>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-username">Username</label>
+                        <input type="text" id="login-username" required placeholder="Enter your username">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" required placeholder="Enter password">
+                    </div>
+                    <button type="submit" class="btn btn-primary"
+                        style="width: 100%; justify-content: center; padding: 0.8rem; font-size: 1rem;">
+                        Login <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    </button>
+                    <p style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">
+                        Har Pal Har Ghar</p>
+                </form>
+            </div>
+        </section>
+
+        <!-- Admin Dashboard View -->
+        <section id="admin-dashboard" class="view hidden">
+            <div class="dashboard-controls">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="search-operator" placeholder="Search operators...">
+                </div>
+                <!-- System Config for Admin Only -->
+                <button id="admin-settings-btn" class="btn btn-outline"><i class="fa-solid fa-gear"></i> Portal
+                    Setup</button>
+            </div>
+
+            <!-- Global Charts Section (Moved to very top) -->
+
+
+            <div class="summary-cards" id="global-summary">
+                <!-- Populated via JS -->
+            </div>
+
+            <!-- Global Charts Section (Medium Size) -->
+            <div class="details-grid" style="margin-bottom: 2.5rem;">
+                <div class="card section-card" style="padding: 1rem;">
+                    <div class="section-header" style="border: none; margin-bottom: 0;">
+                        <h3><i class="fa-solid fa-chart-pie"></i> User Distribution Overview</h3>
+                    </div>
+                    <div style="position: relative; height: 280px;">
+                        <canvas id="adminGlobalChart"></canvas>
+                    </div>
+                </div>
+                <div class="card section-card" style="padding: 1rem;">
+                    <div class="section-header" style="border: none; margin-bottom: 0;">
+                        <h3><i class="fa-solid fa-chart-pie"></i> Financial Overview</h3>
+                    </div>
+                    <div style="position: relative; height: 280px;">
+                        <canvas id="adminFinancialChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="operator-list" id="operator-list">
+                <!-- Operator cards populated via JS -->
+            </div>
+        </section>
+
+        <!-- Admin Operator Detail View -->
+        <section id="admin-operator-detail" class="view hidden">
+            <div class="view-header">
+                <div class="view-header-left">
+                    <button id="admin-back-to-dash" class="btn btn-icon"><i class="fa-solid fa-arrow-left"></i>
+                        Back</button>
+                    <div>
+                        <h2 id="view-op-title" style="display:inline-block; margin-right: 10px;">Operator Name</h2>
+                        <button id="edit-op-info-btn" class="btn btn-icon" title="Edit Operator Profile"><i
+                                class="fa-solid fa-pen"></i></button>
+                    </div>
+                </div>
+                <div class="view-header-actions" style="display:flex; gap:0.5rem; flex-wrap: wrap;">
+                    <button id="remind-all-expiring-btn" class="btn"
+                        style="background-color: var(--primary-color); color: white;"><i
+                            class="fa-brands fa-whatsapp"></i> Bulk Remind</button>
+                    <button id="report-btn" class="btn btn-outline"><i class="fa-solid fa-file-pdf"></i> Dwnld
+                        Invoice</button>
+                    <button id="balance-receipt-btn" class="btn"
+                        style="background-color: var(--warning-color); color: white;"><i
+                            class="fa-solid fa-file-invoice-dollar"></i> Balance Receipt</button>
+                    <button id="receipt-btn" class="btn btn-success"><i class="fa-solid fa-file-invoice"></i> No Dues
+                        Receipt</button>
+                    <button id="delete-op-btn" class="btn btn-danger"><i class="fa-solid fa-trash"></i> Delete
+                        Firm</button>
+                </div>
+            </div>
+
+            <div class="summary-cards" id="admin-op-summary">
+                <!-- Populated via JS -->
+            </div>
+
+            <div class="details-grid">
+                <!-- Plans Section -->
+                <div class="card section-card">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-network-wired"></i> Managed Services (Admin)</h3>
+                        <div style="display:flex; gap:0.5rem; flex-wrap: wrap;">
+                            <button class="btn btn-outline btn-sm" id="add-gst-btn"><i class="fa-solid fa-percent"></i>
+                                Add/Update 18% GST</button>
+                            <button class="btn btn-outline btn-sm" id="remove-gst-btn"
+                                style="color: var(--danger-color); border-color: var(--danger-color);"><i
+                                    class="fa-solid fa-times"></i> Rmv GST</button>
+                            <button class="btn btn-primary btn-sm" id="add-plan-btn"><i class="fa-solid fa-plus"></i>
+                                Add Service</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Pack Details</th>
+                                    <th>Users</th>
+                                    <th>Rate</th>
+                                    <th>Total Expected</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plans-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Payments Section -->
+                <div class="card section-card">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-wallet"></i> Payment Records (Admin)</h3>
+                        <button class="btn btn-primary btn-sm" id="add-payment-btn"><i class="fa-solid fa-plus"></i> Add
+                            Payment</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payments-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- OTT & IPTV Subscribers Section (Auto Messaging Database) -->
+                <div class="card section-card" style="grid-column: 1 / -1; margin-top: 0.5rem;">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-users-gear"></i> Track IPTV & OTT Users</h3>
+                        <button class="btn btn-primary btn-sm" id="add-sub-btn"><i class="fa-solid fa-plus"></i> Add
+                            Tracking User</button>
+                    </div>
+                    <div style="padding: 1rem;">
+                        <h4
+                            style="color: #10b981; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            <i class="fa-solid fa-tv"></i> IPTV Users
+                        </h4>
+                        <div class="table-responsive" style="margin-bottom: 1.5rem;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>User Name</th>
+                                        <th>Bundle</th>
+                                        <th>Dates (Created - Expiry)</th>
+                                        <th>Status</th>
+                                        <th>Messaging Action</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="iptv-subscribers-tbody"></tbody>
+                            </table>
+                        </div>
+
+                        <h4
+                            style="color: #f59e0b; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            <i class="fa-solid fa-mobile-screen"></i> OTT Users
+                        </h4>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>User Name</th>
+                                        <th>Bundle</th>
+                                        <th>Dates (Created - Expiry)</th>
+                                        <th>Status</th>
+                                        <th>Messaging Action</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ott-subscribers-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Operator Portal View (Read-Only Mode) -->
+        <section id="operator-portal" class="view hidden">
+            <div class="view-header">
+                <div class="view-header-left">
+                    <h2 id="op-portal-title">My Dashboard</h2>
+                </div>
+                <!-- 👇 ALL BUTTONS REMOVED - Empty div -->
+                <div class="view-header-actions" style="display:flex; gap:0.5rem; flex-wrap: wrap;">
+                    <button id="op-menu-btn" class="btn btn-primary"><i class="fa-solid fa-bars"></i> Available
+                        Addons</button>
+                </div>
+            </div>
+
+
+
+            <!-- Operator Profile Readonly -->
+            <div class="card section-card" style="margin-bottom: 1.5rem;">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-id-badge"></i> Connectivity Profile</h3>
+                </div>
+                <div
+                    style="padding: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; background: var(--surface-hover);">
+                    <div><span
+                            style="font-size:0.75rem; color:var(--text-muted); display:block; text-transform:uppercase;">Firm
+                            Name</span><strong id="op-profile-name" style="font-size:1.1rem;">-</strong></div>
+                    <div><span
+                            style="font-size:0.75rem; color:var(--text-muted); display:block; text-transform:uppercase;">Phone</span><strong
+                            id="op-profile-phone">-</strong></div>
+                    <div><span
+                            style="font-size:0.75rem; color:var(--text-muted); display:block; text-transform:uppercase;">Network
+                            Port Config</span><strong id="op-profile-port">-</strong></div>
+                    <div><span
+                            style="font-size:0.75rem; color:var(--text-muted); display:block; text-transform:uppercase;">VLAN
+                            ID</span><strong id="op-profile-vlan">-</strong></div>
+                    <div><span
+                            style="font-size:0.75rem; color:var(--text-muted); display:block; text-transform:uppercase;">Address</span><strong
+                            id="op-profile-address">-</strong></div>
+                </div>
+            </div>
+
+            <div class="summary-cards" id="op-portal-summary">
+                <!-- Filled via JS -->
+            </div>
+
+            <!-- Pie chart - Move here (Medium Size) -->
+            <div class="card section-card" style="margin-bottom: 1.5rem; padding: 1rem; grid-column: 1 / -1;">
+                <div class="section-header" style="border: none; margin-bottom: 0;">
+                    <h3><i class="fa-solid fa-chart-pie"></i> User Distribution</h3>
+                </div>
+                <div style="position: relative; height: 280px;">
+                    <canvas id="opPortalChart"></canvas>
+                </div>
+            </div>
+
+            <div class="details-grid">
+                <!-- Plans List Readonly - UPDATED TABLE STRUCTURE -->
+                <div class="card section-card">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-network-wired"></i> Service Package Summary</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Package Name</th>
+                                    <th>Total Users</th>
+                                    <th>Rate (per User)</th>
+                                    <th>Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="op-portal-plans-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Payments Readonly -->
+                <div class="card section-card">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-wallet"></i> My Payment History</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount Paid</th>
+                                    <th>Current Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="op-portal-payments-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Subscribers Readonly -->
+                <div class="card section-card" style="grid-column: 1 / -1; margin-top: 0.5rem;">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-users-gear"></i> Tracked End Users (OTT/IPTV)</h3>
+                    </div>
+                    <div style="padding: 1rem;">
+                        <h4
+                            style="color: #10b981; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            <i class="fa-solid fa-tv"></i> IPTV Users
+                        </h4>
+                        <div class="table-responsive" style="margin-bottom: 1.5rem;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>User Name</th>
+                                        <th>Bundle</th>
+                                        <th>Activation Date</th>
+                                        <th>Expiry Date</th>
+                                        <th>System Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="op-portal-iptv-subscribers-tbody"></tbody>
+                            </table>
+                        </div>
+
+                        <h4
+                            style="color: #f59e0b; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            <i class="fa-solid fa-mobile-screen"></i> OTT Users
+                        </h4>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>User Name</th>
+                                        <th>Bundle</th>
+                                        <th>Activation Date</th>
+                                        <th>Expiry Date</th>
+                                        <th>System Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="op-portal-ott-subscribers-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Modals -->
+
+        <div class="modal-overlay" id="op-menu-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-layer-group"></i> Available IPTV / OTT Packages</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div id="op-menu-iptv-container" style="margin-bottom: 1.5rem;">
+                        <h4
+                            style="color: #10b981; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
+                            <i class="fa-solid fa-tv"></i> IPTV Plans
+                        </h4>
+                        <div id="op-menu-iptv-list" style="display: grid; gap: 10px;"></div>
+                    </div>
+                    <div id="op-menu-ott-container">
+                        <h4
+                            style="color: #f59e0b; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
+                            <i class="fa-solid fa-mobile-screen"></i> OTT Plans
+                        </h4>
+                        <div id="op-menu-ott-list" style="display: grid; gap: 10px;"></div>
+                    </div>
+                </div>
+                <div class="form-actions"
+                    style="margin-top: 0; padding: 1rem 1.5rem; border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn btn-outline cancel-modal" style="width: 100%;">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Super Admin Configuration Modal -->
+        <div class="modal-overlay" id="admin-settings-modal">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <h3>Super Admin Security</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="admin-settings-form">
+                    <div class="form-group">
+                        <label>Update Super Admin Password</label>
+                        <input type="password" id="admin-pass-change" placeholder="Leave blank to keep current">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Admin Username is
+                            permanently locked to: 'admin'</p>
+                    </div>
+                    <div class="form-group"
+                        style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--border-color);">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-brands fa-telegram" style="color: #0088cc; font-size: 1.2rem;"></i>
+                            Telegram Bot Integration
+                        </label>
+                        <input type="text" id="admin-bot-token" placeholder="Enter Bot API Token (e.g. 1234:ABC...)">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Provides fully
+                            automated messaging engine to Chat IDs. Get from @BotFather.</p>
+                    </div>
+
+                    <div class="form-group"
+                        style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--border-color);">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--primary-color);">
+                            <i class="fa-solid fa-image"></i> Invoice Branding (Optional)
+                        </label>
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 0.5rem;">
+                            <div>
+                                <label style="font-size: 0.8rem;">Upload Logo (.png/.jpg)</label>
+                                <input type="file" id="admin-logo-upload" accept="image/png, image/jpeg"
+                                    style="font-size: 0.8rem; padding: 0.5rem;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem;">Upload Signature / Seal (.png only
+                                    recommended)</label>
+                                <input type="file" id="admin-seal-upload" accept="image/png, image/jpeg"
+                                    style="font-size: 0.8rem; padding: 0.5rem;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="operator-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="op-modal-title">Add New Operator Firm</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <!-- Operator Configuration by Admin limits -->
+                <form id="operator-form">
+                    <input type="hidden" id="op-id">
+
+                    <div class="form-group">
+                        <label for="op-name">Firm / Organization Name <span class="required">*</span></label>
+                        <input type="text" id="op-name" required placeholder="e.g., Anil Network">
+                    </div>
+
+                    <div class="form-group"
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 10px; background: rgba(59, 130, 246, 0.05); border-radius: 8px; border: 1px dashed var(--primary-color);">
+                        <div style="grid-column: 1 / -1;"><strong
+                                style="font-size: 0.8rem; color: var(--primary-color);">Portal Login Credentials (Give
+                                this to Operator)</strong></div>
+                        <div>
+                            <label for="op-username">Portal Username <span class="required">*</span></label>
+                            <input type="text" id="op-username" required placeholder="e.g. anil_net24"
+                                autocomplete="off">
+                        </div>
+                        <div>
+                            <label for="op-password">Portal Password <span class="required">*</span></label>
+                            <input type="text" id="op-password" required placeholder="Auto-generated or Type"
+                                autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label for="op-phone">Owner Phone No.</label>
+                            <input type="tel" id="op-phone" placeholder="e.g. 919876543210 (WA Msg)">
+                        </div>
+                        <div>
+                            <label for="op-port">Port Config Details</label>
+                            <input type="text" id="op-port" placeholder="e.g. 500 Mbps Fiber Port">
+                        </div>
+                        <div>
+                            <label for="op-vlan">VLAN ID</label>
+                            <input type="text" id="op-vlan" placeholder="e.g. 100, 201">
+                        </div>
+                    </div>
+
+                    <div class="form-group"
+                        style="padding: 10px; background: rgba(0, 136, 204, 0.05); border-radius: 8px; border: 1px dashed #0088cc;">
+                        <label for="op-chat-id"><i class="fa-brands fa-telegram" style="color: #0088cc;"></i> Telegram
+                            Automation Details</label>
+                        <input type="text" id="op-chat-id" placeholder="Target Chat ID (e.g., -100123... or 12345...)">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Assign individual
+                            operator chat_id. Automatic Bot messages will route here exclusively.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="op-address">Firm Address</label>
+                        <textarea id="op-address" rows="2"
+                            style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-family: var(--font-main);"
+                            placeholder="Full Operational Address..."></textarea>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--border-color);">
+                        <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Quick Setup: Default Packages
+                            (Optional)</h4>
+
+                        <!-- IPTV Setup Container -->
+                        <div id="iptv-rows-container">
+                            <div class="form-group iptv-row"
+                                style="padding: 10px; background: rgba(16, 185, 129, 0.05); border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 0.5rem; position: relative;">
+                                <label
+                                    style="color: #10b981; display:flex; justify-content:space-between; align-items:center;">
+                                    <span><i class="fa-solid fa-tv"></i> IPTV Package</span>
+                                </label>
+                                <div
+                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+                                    <input type="text" class="iptv-name-input"
+                                        placeholder="Pack Name (e.g. Basic IPTV)">
+                                    <input type="number" class="iptv-rate-input" min="0" step="0.01"
+                                        placeholder="Rate (₹/$)">
+                                </div>
+                                <textarea class="iptv-desc-input" rows="1"
+                                    style="width: 100%; margin-top: 0.5rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;"
+                                    placeholder="Description (e.g., 500+ Channels, HD)"></textarea>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline"
+                            style="margin-bottom: 1rem; color: #10b981; border-color: #10b981;"
+                            onclick="addIptvRow()"><i class="fa-solid fa-plus"></i> Add Another IPTV Pack</button>
+
+                        <!-- OTT Setup Container -->
+                        <div id="ott-rows-container">
+                            <div class="form-group ott-row"
+                                style="padding: 10px; background: rgba(245, 158, 11, 0.05); border-radius: 8px; border: 1px dashed #f59e0b; margin-bottom: 0.5rem; position: relative;">
+                                <label
+                                    style="color: #f59e0b; display:flex; justify-content:space-between; align-items:center;">
+                                    <span><i class="fa-solid fa-mobile-screen"></i> OTT Package</span>
+                                </label>
+                                <div
+                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+                                    <input type="text" class="ott-name-input"
+                                        placeholder="Pack Name (e.g. Premium OTT)">
+                                    <input type="number" class="ott-rate-input" min="0" step="0.01"
+                                        placeholder="Rate (₹/$)">
+                                </div>
+                                <textarea class="ott-desc-input" rows="1"
+                                    style="width: 100%; margin-top: 0.5rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;"
+                                    placeholder="Description (e.g., Netflix, Prime, Hotstar)"></textarea>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline"
+                            style="margin-bottom: 1rem; color: #f59e0b; border-color: #f59e0b;" onclick="addOttRow()"><i
+                                class="fa-solid fa-plus"></i> Add Another OTT Pack</button>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="op-submit-btn">Create Operator</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="sub-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="sub-modal-title">Add Tracking User</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="sub-form">
+                    <input type="hidden" id="sub-id">
+                    <div class="form-group">
+                        <label for="sub-name">User Name / Identifier <span class="required">*</span></label>
+                        <input type="text" id="sub-name" required placeholder="e.g. Rahul Sharma or RS-101">
+                    </div>
+                    <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label for="sub-platform">Platform <span class="required">*</span></label>
+                            <select id="sub-platform" required>
+                                <option value="IPTV">IPTV</option>
+                                <option value="OTT">OTT</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="sub-bundle">Select Pack <span class="required">*</span></label>
+                            <select id="sub-bundle" required></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="sub-created">Activation / Start Date <span class="required">*</span></label>
+                        <input type="date" id="sub-created" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="sub-expiry">Expiry Date <span class="required">*</span></label>
+                        <input type="date" id="sub-expiry" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Tracker</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="upi-modal">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <h3>Setup UPI & GST Options</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="upi-form">
+                    <div class="form-group">
+                        <label for="upi-id">Virtual Payment Address (UPI ID)</label>
+                        <input type="text" id="upi-id" placeholder="e.g., yourname@bank or 1234567890@ybl">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">This will be used
+                            to automatically generate scannable Payment QR codes on your Operator Portal Invoices.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="gst-number">Firm GST Number</label>
+                        <input type="text" id="gst-number" placeholder="Enter valid GSTIN">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Config</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="plan-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="plan-modal-title">Add / Edit Service Plan</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="plan-form">
+                    <input type="hidden" id="plan-id">
+
+                    <div class="form-group">
+                        <label for="plan-category">Service Category <span class="required">*</span></label>
+                        <select id="plan-category" required>
+                            <option value="Internet">Internet</option>
+                            <option value="IPTV">IPTV</option>
+                            <option value="OTT">OTT</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="plan-type">Pack Details / Name (Customizable) <span
+                                class="required">*</span></label>
+                        <input type="text" id="plan-type" list="plan-types" required
+                            placeholder="e.g., 50 Mbps, Basic Pack, Netflix...">
+                        <datalist id="plan-types">
+                            <option value="20 Mbps"></option>
+                            <option value="50 Mbps"></option>
+                            <option value="100 Mbps"></option>
+                            <option value="200 Mbps"></option>
+                            <option value="Basic IPTV"></option>
+                            <option value="Premium OTT"></option>
+                        </datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="plan-description">Pack Description (Channels, Apps, Details)</label>
+                        <textarea id="plan-description" rows="2"
+                            style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-family: var(--font-main);"
+                            placeholder="e.g. 500+ Live Channels or Netflix+Prime Included..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="plan-users">Number of Users <span class="required">*</span></label>
+                        <input type="number" id="plan-users" min="0" required placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="plan-rate">Rate per User (₹/$) <span class="required">*</span></label>
+                        <input type="number" id="plan-rate" min="0" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Plan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="payment-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="payment-modal-title">Add Payment</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="payment-form">
+                    <input type="hidden" id="payment-id">
+                    <div class="form-group">
+                        <label for="payment-type">Payment Type <span class="required">*</span></label>
+                        <select id="payment-type" required>
+                            <option value="" disabled selected>Select Payment Type</option>
+                            <option value="Data">Data</option>
+                            <option value="Balance Add">Balance Add</option>
+                            <option value="IPTV">IPTV</option>
+                            <option value="OTT">OTT</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-amount">Amount <span class="required">*</span></label>
+                        <input type="number" id="payment-amount" min="0" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-date">Date <span class="required">*</span></label>
+                        <input type="date" id="payment-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-status">Status</label>
+                        <select id="payment-status">
+                            <option value="Paid">Paid</option>
+                            <option value="Unpaid">Unpaid</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Payment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="confirm-modal">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <h3 id="confirm-title">Confirm Action</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirm-message">Are you sure you want to proceed?</p>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirm-btn">Yes, Execute</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="report-modal">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <h3 id="report-modal-header-title">Download Configuration</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="report-form">
+                    <div class="form-group"
+                        style="display: flex; align-items: center; gap: 0.5rem; background: var(--surface-hover); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <input type="checkbox" id="report-gst"
+                            style="width: 1.25rem; height: 1.25rem; accent-color: var(--primary-color); cursor: pointer;">
+                        <label for="report-gst"
+                            style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                            Apply 18% GST Status to Bill
+                        </label>
+                    </div>
+                    <div class="form-actions" style="margin-top: 1rem;">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-file-pdf"></i> Generate
+                            File</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="msg-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Custom Notification Templates</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="msg-form">
+                    <div class="form-group">
+                        <label for="msg-single">Single User Reminder (Text Structure)</label>
+                        <textarea id="msg-single" rows="5" required
+                            style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-family: var(--font-main);"></textarea>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Variables allowed: <code>{OperatorName}</code>, <code>{UserName}</code>,
+                            <code>{Platform}</code>, <code>{Bundle}</code>, <code>{ExpiryDate}</code>
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label for="msg-bulk">Bulk Reminder Introductory Head (Runs dynamically)</label>
+                        <textarea id="msg-bulk" rows="3" required
+                            style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-family: var(--font-main);"></textarea>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Variables allowed: <code>{OperatorName}</code>
+                        </p>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline cancel-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Templates</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="chart-details-modal">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-chart-pie"></i> Detailed User Analytics</h3>
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem !important;">
+                    <div
+                        style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #e2e8f0;">
+                        <span style="color: #64748b; font-weight: 600;">Total Users</span>
+                        <strong id="cd-total-users" style="font-size: 1.1rem;">0</strong>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #e2e8f0; background: #f0fdf4;">
+                        <span style="color: #16a34a; font-weight: 600;"><i class="fa-solid fa-tv"></i> IPTV Users</span>
+                        <strong id="cd-iptv-users" style="color: #15803d; font-size: 1.1rem;">0</strong>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #e2e8f0; background: #fffbeb;">
+                        <span style="color: #d97706; font-weight: 600;"><i class="fa-solid fa-mobile-screen"></i> OTT
+                            Users</span>
+                        <strong id="cd-ott-users" style="color: #b45309; font-size: 1.1rem;">0</strong>
+                    </div>
+                    <div style="padding: 10px; border-bottom: 1px solid #e2e8f0; margin-top: 1rem;">
+                        <span style="color: #ef4444; font-weight: 600; font-size: 0.85rem;"><i
+                                class="fa-solid fa-clock"></i> IPTV Expiring (&lt; 7 Days)</span>
+                        <div id="cd-iptv-exp"
+                            style="margin-top: 0.5rem; display:flex; flex-direction:column; gap:0.25rem;"></div>
+                    </div>
+                    <div style="padding: 10px;">
+                        <span style="color: #ef4444; font-weight: 600; font-size: 0.85rem;"><i
+                                class="fa-solid fa-clock"></i> OTT Expiring (&lt; 7 Days)</span>
+                        <div id="cd-ott-exp"
+                            style="margin-top: 0.5rem; display:flex; flex-direction:column; gap:0.25rem;"></div>
+                    </div>
+                </div>
+                <div class="form-actions" style="margin-top: 0; padding: 1rem 1.5rem; border-top: none;">
+                    <button type="button" class="btn btn-primary cancel-modal"
+                        style="width: 100%; justify-content: center;">Close Analytics</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="pwa-install-modal">
+            <div class="modal modal-sm" style="text-align: center; padding: 2rem 1.5rem;">
+                <div
+                    style="width: 80px; height: 80px; background: var(--primary-light); color: var(--primary-color); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1.5rem;">
+                    <i class="fa-solid fa-cloud-arrow-down"></i>
+                </div>
+                <h3 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Install
+                    App</h3>
+                <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 2rem;">Add
+                    Hybrid Portal to your home screen for quick access and full-screen experience.</p>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button class="btn btn-outline close-modal" style="flex: 1;">Not Now</button>
+                    <button class="btn btn-primary" id="pwa-install-btn" style="flex: 1;">Install</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast-container" class="toast-container"></div>
+    </main>
+
+    <div id="print-area"></div>
+
+    <!-- Add Operator FAB Button -->
+    <button class="fab" id="add-operator-fab" title="Add New Operator">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>
