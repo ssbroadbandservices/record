@@ -56,8 +56,13 @@ onValue(operatorsRef, (snapshot) => {
     } else if (isInitialSync && operators.length > 0) {
         set(operatorsRef, operators);
     } else {
-        operators = [];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(operators));
+        if (operators.length > 0) {
+            console.log("Firebase sync empty, preventing accidental wipe.");
+            set(operatorsRef, operators);
+        } else {
+            operators = [];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(operators));
+        }
     }
 
     isInitialSync = false;
@@ -126,7 +131,7 @@ function saveData() {
 function calculateOperatorMetrics(operator) {
     const plans = operator.plans || [];
     const payments = operator.payments || [];
-    const realPlans = plans.filter(p => !p.type.includes('18% GST') && !p.type.includes('GST 18%'));
+    const realPlans = plans.filter(p => p && p.type && !p.type.includes('18% GST') && !p.type.includes('GST 18%'));
     let totalUsers = realPlans.reduce((sum, p) => sum + parseInt(p.users || 0), 0);
     let baseRevenue = realPlans.reduce((sum, p) => sum + (parseInt(p.users || 0) * parseFloat(p.rate || 0)), 0);
 
@@ -135,7 +140,7 @@ function calculateOperatorMetrics(operator) {
         baseRevenue += parseFloat(sub.rate || 0);
     });
 
-    const hasLegacyGst = plans.some(p => p.type.includes('18% GST') || p.type.includes('GST 18%'));
+    const hasLegacyGst = plans.some(p => p && p.type && (p.type.includes('18% GST') || p.type.includes('GST 18%')));
     if (hasLegacyGst) operator.applyGst = true;
 
     const gstAmount = operator.applyGst ? (baseRevenue * 0.18) : 0;
@@ -223,10 +228,10 @@ function renderApp() {
             if (fabButton) fabButton.style.display = 'flex';
 
             if (currentAdminViewOpId) {
-                renderAdminOperatorDetail();
+                try { renderAdminOperatorDetail(); } catch (err) { console.error('Detail Render:', err); showToast('Detail Error: ' + err.message, 'error'); }
                 switchView('adminDetail');
             } else {
-                renderAdminDashboard();
+                try { renderAdminDashboard(); } catch (err) { console.error('Dash Render:', err); showToast('Dashboard Error: ' + err.message, 'error'); }
                 switchView('adminDash');
             }
         } else if (activeUser.role === 'operator') {
@@ -236,7 +241,7 @@ function renderApp() {
             const op = operators.find(o => o.id === activeUser.id);
             if (op) {
                 greeting.textContent = `Hi, ${op.name}`;
-                renderOperatorPortal(op);
+                try { renderOperatorPortal(op); } catch (err) { console.error('Portal Render:', err); showToast('Portal Error: ' + err.message, 'error'); }
                 switchView('opPortal');
             } else if (operators.length > 0) {
                 showToast('Your account is no longer active.', 'error');
@@ -279,7 +284,7 @@ function renderAdminDashboard(searchTerm = '') {
     }
 
     const ctx = document.getElementById('adminGlobalChart');
-    if (ctx) {
+    if (ctx && typeof Chart !== 'undefined') {
         adminChartInstance = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -309,7 +314,7 @@ function renderAdminDashboard(searchTerm = '') {
     }
 
     const mCtx = document.getElementById('adminFinancialChart');
-    if (mCtx) {
+    if (mCtx && typeof Chart !== 'undefined') {
         adminFinancialChartInstance = new Chart(mCtx, {
             type: 'doughnut',
             data: {
@@ -443,7 +448,7 @@ function renderOperatorPortal(op) {
     }
 
     const ctx = document.getElementById('opPortalChart');
-    if (ctx) {
+    if (ctx && typeof Chart !== 'undefined') {
         opChartInstance = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -751,16 +756,34 @@ function handleDownloadRpt(e) {
     const gstNo = localStorage.getItem(GST_KEY);
     const applyGst = e ? document.getElementById('report-gst').checked : op.applyGst;
 
+    let selectedUnpaidAmount = 0;
+    let backlogRows = '';
+    if (e) {
+        const checkedBills = document.querySelectorAll('.unpaid-bill-check:checked');
+        checkedBills.forEach(cb => {
+            const amt = parseFloat(cb.dataset.amount);
+            selectedUnpaidAmount += amt;
+            backlogRows += `<tr style="background:#fff1f2;">
+                <td style="padding:12px; border:1px solid #e2e8f0;"><strong>Previous Dues</strong></td>
+                <td style="padding:12px; border:1px solid #e2e8f0; color:#be123c;">${cb.dataset.type} (${formatDate(cb.dataset.date)})</td>
+                <td style="padding:12px; border:1px solid #e2e8f0; text-align:center;">Unpaid</td>
+                <td style="padding:12px; border:1px solid #e2e8f0; text-align:center;"><strong style="color:#be123c;">${formatCurrency(amt)}</strong></td>
+            </tr>`;
+        });
+    }
+
+    const finalOutstanding = m.outstanding + selectedUnpaidAmount;
+
     let qrHtml = '';
-    if (upiId && upiId.trim() !== '' && m.outstanding > 0) {
-        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId.trim())}&pn=Hybrid%20Internet&am=${m.outstanding.toFixed(2)}&cu=INR`;
+    if (upiId && upiId.trim() !== '' && finalOutstanding > 0) {
+        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId.trim())}&pn=Hybrid%20Internet&am=${finalOutstanding.toFixed(2)}&cu=INR`;
         qrHtml = `<div style="text-align: left; padding: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
             <p style="font-weight: 700; font-size: 13px; margin: 0 0 0.5rem 0; color: #0f172a;">📱 Scan to Pay</p>
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(upiLink)}" style="width: 100px; height: 100px; border: 1px solid #cbd5e1; border-radius: 6px;">
                 <div>
                     <p style="margin: 0; font-size: 12px; color: #475569;">UPI ID:<br><strong style="color: #0f172a;">${upiId}</strong></p>
-                    <p style="margin: 0.5rem 0 0 0; font-size: 12px; color: #475569;">Amount:<br><strong style="font-size: 14px; color: #0f172a;">${formatCurrency(m.outstanding)}</strong></p>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 12px; color: #475569;">Amount:<br><strong style="font-size: 14px; color: #0f172a;">${formatCurrency(finalOutstanding)}</strong></p>
                 </div>
             </div>
         </div>`;
@@ -837,23 +860,24 @@ function handleDownloadRpt(e) {
                     <td style="text-align:center; padding:12px; border:1px solid #e2e8f0;"><strong>${formatCurrency(m.baseRevenue)}</strong></td>
                 </tr>
                 ${gstRow}
+                ${backlogRows}
                 <tr style="background:#e2e8f0;">
-                    <td colspan="3" style="text-align:right; padding:12px; border:1px solid #e2e8f0;"><strong>Total Amount:</strong></td>
-                    <td style="text-align:center; padding:12px; border:1px solid #e2e8f0;"><strong>${formatCurrency(totalWithGst)}</strong></td>
+                    <td colspan="3" style="text-align:right; padding:12px; border:1px solid #e2e8f0;"><strong>Grand Total:</strong></td>
+                    <td style="text-align:center; padding:12px; border:1px solid #e2e8f0;"><strong>${formatCurrency(totalWithGst + selectedUnpaidAmount)}</strong></td>
                 </tr>
             </tbody>
         </table>
         
         <!-- Payment Summary -->
-        <div style="margin-top:2rem; padding:1.5rem; background: ${outstanding > 0 ? '#fff1f2' : '#f0fdf4'}; border: 1px solid ${outstanding > 0 ? '#fecdd3' : '#bbf7d0'}; border-radius: 12px;">
+        <div style="margin-top:2rem; padding:1.5rem; background: ${finalOutstanding > 0 ? '#fff1f2' : '#f0fdf4'}; border: 1px solid ${finalOutstanding > 0 ? '#fecdd3' : '#bbf7d0'}; border-radius: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <p style="margin:0; font-size:14px;">Paid Amount:</p>
-                    <p style="margin:0; font-size:14px;">Outstanding:</p>
+                    <p style="margin:0; font-size:14px;">Recent Paid Amount:</p>
+                    <p style="margin:0; font-size:14px;">Outstanding Due:</p>
                 </div>
                 <div style="text-align:right;">
                     <p style="margin:0; font-size:14px;"><strong>${formatCurrency(m.totalPaid)}</strong></p>
-                    <p style="margin:0; font-size:24px; font-weight:800; color:${outstanding > 0 ? '#be123c' : '#15803d'};">${formatCurrency(outstanding)}</p>
+                    <p style="margin:0; font-size:24px; font-weight:800; color:${finalOutstanding > 0 ? '#be123c' : '#15803d'};">${formatCurrency(finalOutstanding)}</p>
                 </div>
             </div>
         </div>
@@ -1064,6 +1088,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rate = row.querySelector('.iptv-rate-input')?.value;
             const desc = row.querySelector('.iptv-desc-input')?.value.trim();
             if (name && rate) {
+                if (!op.plans) op.plans = [];
                 op.plans.push({
                     id: generateId(),
                     category: 'IPTV',
@@ -1081,6 +1106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rate = row.querySelector('.ott-rate-input')?.value;
             const desc = row.querySelector('.ott-desc-input')?.value.trim();
             if (name && rate) {
+                if (!op.plans) op.plans = [];
                 op.plans.push({
                     id: generateId(),
                     category: 'OTT',
@@ -1112,9 +1138,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         if (planId) {
+            if (!op.plans) op.plans = [];
             const index = op.plans.findIndex(p => p.id === planId);
             if (index >= 0) op.plans[index] = { id: planId, ...planData };
         } else {
+            if (!op.plans) op.plans = [];
             op.plans.push({ id: generateId(), ...planData });
         }
 
@@ -1128,6 +1156,8 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const op = operators.find(o => o.id === currentAdminViewOpId);
         if (!op) return;
+
+        if (!op.payments) op.payments = [];
 
         op.payments.push({
             id: generateId(),
@@ -1166,9 +1196,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         if (subId) {
+            if (!op.subscribers) op.subscribers = [];
             const index = op.subscribers.findIndex(s => s.id === subId);
             if (index >= 0) op.subscribers[index] = { id: subId, ...subData };
         } else {
+            if (!op.subscribers) op.subscribers = [];
             op.subscribers.push({ id: generateId(), ...subData });
         }
 
@@ -1307,7 +1339,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Report button
-    document.getElementById('report-btn')?.addEventListener('click', () => openModal('report-modal'));
+    document.getElementById('report-btn')?.addEventListener('click', () => {
+        const op = operators.find(o => o.id === currentAdminViewOpId);
+        const unpaidContainer = document.getElementById('unpaid-bills-container');
+        const unpaidList = document.getElementById('unpaid-bills-list');
+
+        if (op && unpaidContainer && unpaidList) {
+            const unpaidPayments = (op.payments || []).filter(p => p.status === 'Unpaid');
+            if (unpaidPayments.length > 0) {
+                unpaidContainer.style.display = 'block';
+                unpaidList.innerHTML = '';
+                unpaidPayments.forEach(p => {
+                    unpaidList.innerHTML += `
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; padding: 0.5rem; background: #fff; border: 1px solid #fecdd3; border-radius: 4px;">
+                            <input type="checkbox" class="unpaid-bill-check" value="${p.id}" data-amount="${p.amount}" data-type="${p.type}" data-date="${p.date}"
+                                style="width: 1rem; height: 1rem; accent-color: #be123c; cursor: pointer;">
+                            <label style="margin: 0; font-size: 0.85rem; cursor: pointer; color: #be123c; flex: 1;">
+                                <strong>${formatDate(p.date)}</strong> - ${p.type} <span style="float: right;">${formatCurrency(p.amount)}</span>
+                            </label>
+                        </div>
+                    `;
+                });
+            } else {
+                unpaidContainer.style.display = 'none';
+            }
+        }
+        openModal('report-modal');
+    });
     document.getElementById('balance-receipt-btn')?.addEventListener('click', () => handleDownloadRpt()); // mapped appropriately
 
     // No dues receipt
@@ -1352,6 +1410,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Add buttons
+    document.getElementById('add-dues-btn')?.addEventListener('click', () => {
+        document.getElementById('payment-form').reset();
+        document.getElementById('payment-id').value = '';
+        document.getElementById('payment-type').value = 'Previous Month Invoice';
+        document.getElementById('payment-status').value = 'Unpaid';
+        document.getElementById('payment-date').valueAsDate = new Date();
+        document.getElementById('payment-modal-title').textContent = 'Log Past Due Bill';
+        openModal('payment-modal');
+    });
+
     document.getElementById('add-plan-btn')?.addEventListener('click', () => {
         document.getElementById('plan-form').reset();
         document.getElementById('plan-id').value = '';
@@ -1361,6 +1429,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('add-payment-btn')?.addEventListener('click', () => {
         document.getElementById('payment-form').reset();
         document.getElementById('payment-date').valueAsDate = new Date();
+        document.getElementById('payment-status').value = 'Paid';
+        document.getElementById('payment-modal-title').textContent = 'Add Payment';
         openModal('payment-modal');
     });
 
