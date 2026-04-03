@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hybrid-portal-v3'; // Bumped version to clear old cache!
+const CACHE_NAME = 'hybrid-portal-v6'; // Bumped version to clear old cache!
 const ASSETS = [
     './',
     './index.html',
